@@ -30,7 +30,7 @@ class _ReplaceRow(QWidget):
         super().__init__(parent)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(6)
+        layout.setSpacing(8)
         self.find_edit = QLineEdit()
         self.find_edit.setPlaceholderText("Find")
         self.replace_edit = QLineEdit()
@@ -63,7 +63,7 @@ class RenameWindow(QDialog):
         layout.addWidget(title_bar)
 
         body = QVBoxLayout()
-        body.setContentsMargins(12, 10, 12, 10)
+        body.setContentsMargins(12, 12, 12, 12)
         body.setSpacing(8)
 
         self._sel_label = QLabel(rn_sel.selection_summary(self._selection))
@@ -95,13 +95,13 @@ class RenameWindow(QDialog):
         body.addLayout(replace_header)
 
         self._replace_host = QVBoxLayout()
-        self._replace_host.setSpacing(4)
+        self._replace_host.setSpacing(8)
         replace_wrap = QWidget()
         replace_wrap.setLayout(self._replace_host)
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setWidget(replace_wrap)
-        scroll.setMinimumHeight(88)
+        scroll.setMinimumHeight(96)
         scroll.setMaximumHeight(160)
         body.addWidget(scroll)
 

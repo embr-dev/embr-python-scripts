@@ -23,12 +23,20 @@ EMBR_BORDER = "#4C4E52"
 EMBR_TEXT = "#E8E8E8"
 EMBR_MUTED = "#9B9DA1"
 
-# Frameless window chrome
-EMBR_WINDOW_RADIUS = 5
+# Frameless window chrome + density scale (4px base)
+EMBR_WINDOW_RADIUS = 6
+EMBR_RADIUS = 4  # controls, lists, scroll areas
+EMBR_SPACE_1 = 4
+EMBR_SPACE_2 = 8
+EMBR_SPACE_3 = 12
+EMBR_SPACE_4 = 16
+# Outer control height is 32px (min-height 30 + 1px border top/bottom).
+EMBR_CONTROL_MIN_HEIGHT = 30
 EMBR_TITLE_ICON_SIZE = 24
 EMBR_TITLE_CTRL_ICON_SIZE = 16
-EMBR_TITLE_BRAND_PT = 17
+EMBR_TITLE_BRAND_PT = 16
 EMBR_TITLE_BRAND_GAP = 4
+EMBR_TITLE_BTN = 36
 
 # Back-compat aliases used by older call sites / docs
 EMBR_ASH = EMBR_BG
@@ -280,30 +288,38 @@ def logo_pixmap(name: str = "embr-mark.svg", width: int = 120) -> Any:
 
 
 def stylesheet(*, combo_arrow_url: str | None = None) -> str:
-    """Return QSS using neutral chrome + Ember accents + Figtree."""
+    """Return QSS using neutral chrome + Ember accents + Figtree.
+
+    Spacing follows a 4px scale. Interactive controls share one outer height
+    (``EMBR_CONTROL_MIN_HEIGHT`` + borders ≈ 32px).
+    """
     family = _ensure_figtree_loaded()
     arrow = combo_arrow_url or ""
+    r = EMBR_RADIUS
+    s1, s2, s3, s4 = EMBR_SPACE_1, EMBR_SPACE_2, EMBR_SPACE_3, EMBR_SPACE_4
+    ctrl_h = EMBR_CONTROL_MIN_HEIGHT
+    wr = EMBR_WINDOW_RADIUS
     arrow_rule = (
         f"""
     QComboBox::down-arrow {{
         image: url("{arrow}");
-        width: 16px;
-        height: 16px;
+        width: {s4}px;
+        height: {s4}px;
     }}
     QComboBox::drop-down {{
         subcontrol-origin: padding;
         subcontrol-position: center right;
-        width: 26px;
+        width: 28px;
         border: none;
         background: transparent;
     }}
     """
         if arrow
-        else """
-    QComboBox::drop-down {
+        else f"""
+    QComboBox::drop-down {{
         border: none;
         width: 20px;
-    }
+    }}
     """
     )
     return f"""
@@ -330,16 +346,16 @@ def stylesheet(*, combo_arrow_url: str | None = None) -> str:
         background-color: {EMBR_SURFACE};
         color: {EMBR_MUTED};
         border-top: 1px solid {EMBR_BORDER};
-        border-bottom-left-radius: {EMBR_WINDOW_RADIUS}px;
-        border-bottom-right-radius: {EMBR_WINDOW_RADIUS}px;
-        padding: 6px 12px;
+        border-bottom-left-radius: {wr}px;
+        border-bottom-right-radius: {wr}px;
+        padding: {s2}px {s3}px;
         font-size: 12px;
     }}
     QWidget#embrTitleBar {{
         background-color: {EMBR_SURFACE};
         border-bottom: 1px solid {EMBR_BORDER};
-        border-top-left-radius: {EMBR_WINDOW_RADIUS}px;
-        border-top-right-radius: {EMBR_WINDOW_RADIUS}px;
+        border-top-left-radius: {wr}px;
+        border-top-right-radius: {wr}px;
     }}
     QWidget#embrTitleBar QWidget,
     QWidget#embrTitleBar QLabel {{
@@ -367,8 +383,10 @@ def stylesheet(*, combo_arrow_url: str | None = None) -> str:
         background-color: {EMBR_SURFACE_RAISED};
         color: {EMBR_TEXT};
         border: 1px solid {EMBR_BORDER};
-        padding: 4px 28px 4px 8px;
-        border-radius: 4px;
+        border-radius: {r}px;
+        min-height: {ctrl_h}px;
+        max-height: {ctrl_h}px;
+        padding: 0px 28px 0px {s2}px;
         min-width: 96px;
     }}
     QComboBox:hover {{
@@ -386,13 +404,13 @@ def stylesheet(*, combo_arrow_url: str | None = None) -> str:
         selection-color: {EMBR_TEXT};
         border: 1px solid {EMBR_BORDER};
         outline: none;
-        padding: 2px;
+        padding: {s1}px;
     }}
     QComboBox QAbstractItemView::item {{
-        padding: 6px 8px;
-        min-height: 22px;
+        padding: {s2}px;
+        min-height: 24px;
         border: none;
-        border-radius: 3px;
+        border-radius: {r}px;
     }}
     QComboBox QAbstractItemView::item:selected {{
         background-color: {EMBR_EMBER_DEEP};
@@ -408,14 +426,14 @@ def stylesheet(*, combo_arrow_url: str | None = None) -> str:
         border: none;
         padding: 0px;
         margin: 0px;
-        min-width: 36px;
-        max-width: 36px;
-        min-height: 36px;
-        max-height: 36px;
+        min-width: {EMBR_TITLE_BTN}px;
+        max-width: {EMBR_TITLE_BTN}px;
+        min-height: {EMBR_TITLE_BTN}px;
+        max-height: {EMBR_TITLE_BTN}px;
         border-radius: 0;
     }}
     QPushButton#embrWinClose {{
-        border-top-right-radius: {EMBR_WINDOW_RADIUS}px;
+        border-top-right-radius: {wr}px;
     }}
     QPushButton#embrWinBtn:hover {{
         background-color: {EMBR_SURFACE_RAISED};
@@ -438,6 +456,7 @@ def stylesheet(*, combo_arrow_url: str | None = None) -> str:
         selection-background-color: {EMBR_EMBER_DEEP};
         selection-color: {EMBR_TEXT};
         border: 1px solid {EMBR_BORDER};
+        border-radius: {r}px;
         outline: none;
     }}
     QTableWidget:disabled {{
@@ -448,7 +467,7 @@ def stylesheet(*, combo_arrow_url: str | None = None) -> str:
     QHeaderView::section {{
         background-color: {EMBR_SURFACE_RAISED};
         color: {EMBR_TEXT};
-        padding: 6px;
+        padding: {s2}px;
         border: none;
         border-right: 1px solid {EMBR_BORDER};
         border-bottom: 1px solid {EMBR_BORDER};
@@ -457,11 +476,10 @@ def stylesheet(*, combo_arrow_url: str | None = None) -> str:
         background-color: {EMBR_SURFACE_RAISED};
         color: {EMBR_TEXT};
         border: 1px solid {EMBR_BORDER};
-        /* Fixed outer height with QLineEdit (border + min-height). */
-        min-height: 30px;
-        max-height: 30px;
-        padding: 0px 14px;
-        border-radius: 4px;
+        min-height: {ctrl_h}px;
+        max-height: {ctrl_h}px;
+        padding: 0px {s3}px;
+        border-radius: {r}px;
     }}
     QPushButton:hover {{
         background-color: #3C3E43;
@@ -501,11 +519,10 @@ def stylesheet(*, combo_arrow_url: str | None = None) -> str:
         background-color: {EMBR_SURFACE_RAISED};
         color: {EMBR_TEXT};
         border: 1px solid {EMBR_BORDER};
-        border-radius: 4px;
-        /* Same outer height as QPushButton (30 content + 1px border each side). */
-        min-height: 30px;
-        max-height: 30px;
-        padding: 0px 8px;
+        border-radius: {r}px;
+        min-height: {ctrl_h}px;
+        max-height: {ctrl_h}px;
+        padding: 0px {s2}px;
         selection-background-color: {EMBR_EMBER_DEEP};
         selection-color: {EMBR_TEXT};
     }}
@@ -525,13 +542,13 @@ def stylesheet(*, combo_arrow_url: str | None = None) -> str:
         alternate-background-color: {EMBR_SURFACE_RAISED};
         color: {EMBR_TEXT};
         border: 1px solid {EMBR_BORDER};
-        border-radius: 4px;
+        border-radius: {r}px;
         outline: none;
-        padding: 2px;
+        padding: {s1}px;
     }}
     QListWidget::item, QListView::item {{
-        padding: 6px 8px;
-        border-radius: 3px;
+        padding: {s2}px;
+        border-radius: {r}px;
     }}
     QListWidget::item:selected, QListView::item:selected {{
         background-color: {EMBR_EMBER_DEEP};
@@ -541,10 +558,10 @@ def stylesheet(*, combo_arrow_url: str | None = None) -> str:
         background-color: {EMBR_SURFACE_RAISED};
     }}
     QListWidget::indicator, QListView::indicator {{
-        width: 14px;
-        height: 14px;
+        width: {s4}px;
+        height: {s4}px;
         border: 1px solid {EMBR_BORDER};
-        border-radius: 3px;
+        border-radius: {s1}px;
         background-color: {EMBR_SURFACE_RAISED};
     }}
     QListWidget::indicator:checked, QListView::indicator:checked {{
@@ -554,20 +571,20 @@ def stylesheet(*, combo_arrow_url: str | None = None) -> str:
     QScrollArea {{
         background-color: transparent;
         border: 1px solid {EMBR_BORDER};
-        border-radius: 4px;
+        border-radius: {r}px;
     }}
     QScrollArea > QWidget > QWidget {{
         background-color: {EMBR_SURFACE};
     }}
     QScrollBar:vertical {{
         background: {EMBR_SURFACE};
-        width: 10px;
+        width: {s2}px;
         margin: 0;
         border: none;
     }}
     QScrollBar::handle:vertical {{
         background: #5A5C60;
-        border-radius: 4px;
+        border-radius: {s1}px;
         min-height: 24px;
     }}
     QScrollBar::handle:vertical:hover {{
@@ -580,13 +597,13 @@ def stylesheet(*, combo_arrow_url: str | None = None) -> str:
     }}
     QScrollBar:horizontal {{
         background: {EMBR_SURFACE};
-        height: 10px;
+        height: {s2}px;
         margin: 0;
         border: none;
     }}
     QScrollBar::handle:horizontal {{
         background: #5A5C60;
-        border-radius: 4px;
+        border-radius: {s1}px;
         min-width: 24px;
     }}
     QScrollBar::handle:horizontal:hover {{
@@ -609,6 +626,7 @@ def stylesheet(*, combo_arrow_url: str | None = None) -> str:
         background: transparent;
     }}
     """
+
 
 
 def apply_no_focus_rect(widget: Any) -> None:
@@ -779,7 +797,7 @@ def style_combo(combo: Any) -> None:
     def _row_height(active_view: Any) -> int:
         hint = int(active_view.sizeHintForRow(0)) if combo.count() else 0
         fm_h = int(combo.fontMetrics().height())
-        return max(hint, fm_h + 14, 28)
+        return max(hint, fm_h + 14, EMBR_CONTROL_MIN_HEIGHT + 2)
 
     def _hide_combo_scrollers(popup: Any) -> None:
         # QComboBoxPrivateScroller draws the up/down chevrons when the list

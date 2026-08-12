@@ -76,7 +76,7 @@ class ScriptManagerWindow(QDialog):
         layout.addWidget(title_bar)
 
         body = QVBoxLayout()
-        body.setContentsMargins(12, 10, 12, 10)
+        body.setContentsMargins(12, 12, 12, 12)
         body.setSpacing(8)
 
         meta = QHBoxLayout()
