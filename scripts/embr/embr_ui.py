@@ -24,7 +24,7 @@ EMBR_TEXT = "#E8E8E8"
 EMBR_MUTED = "#9B9DA1"
 
 # Frameless window chrome
-EMBR_WINDOW_RADIUS = 6
+EMBR_WINDOW_RADIUS = 8
 EMBR_TITLE_ICON_SIZE = 24
 EMBR_TITLE_CTRL_ICON_SIZE = 16
 EMBR_TITLE_BRAND_PT = 17
@@ -470,6 +470,114 @@ def stylesheet(*, combo_arrow_url: str | None = None) -> str:
         border-color: #4A433C;
         font-weight: 600;
     }}
+    QLineEdit {{
+        background-color: {EMBR_SURFACE_RAISED};
+        color: {EMBR_TEXT};
+        border: 1px solid {EMBR_BORDER};
+        border-radius: 4px;
+        padding: 6px 8px;
+        selection-background-color: {EMBR_EMBER_DEEP};
+        selection-color: {EMBR_TEXT};
+    }}
+    QLineEdit:hover {{
+        border-color: #6A6C70;
+    }}
+    QLineEdit:focus {{
+        border-color: {EMBR_EMBER};
+    }}
+    QLineEdit:disabled {{
+        background-color: {EMBR_SURFACE};
+        color: #5C5E62;
+        border-color: #3A3C40;
+    }}
+    QListWidget, QListView {{
+        background-color: {EMBR_SURFACE};
+        alternate-background-color: {EMBR_SURFACE_RAISED};
+        color: {EMBR_TEXT};
+        border: 1px solid {EMBR_BORDER};
+        border-radius: 4px;
+        outline: none;
+        padding: 2px;
+    }}
+    QListWidget::item, QListView::item {{
+        padding: 6px 8px;
+        border-radius: 3px;
+    }}
+    QListWidget::item:selected, QListView::item:selected {{
+        background-color: {EMBR_EMBER_DEEP};
+        color: {EMBR_TEXT};
+    }}
+    QListWidget::item:hover:!selected, QListView::item:hover:!selected {{
+        background-color: {EMBR_SURFACE_RAISED};
+    }}
+    QListWidget::indicator, QListView::indicator {{
+        width: 14px;
+        height: 14px;
+        border: 1px solid {EMBR_BORDER};
+        border-radius: 3px;
+        background-color: {EMBR_SURFACE_RAISED};
+    }}
+    QListWidget::indicator:checked, QListView::indicator:checked {{
+        background-color: {EMBR_EMBER};
+        border-color: {EMBR_EMBER_DEEP};
+    }}
+    QScrollArea {{
+        background-color: transparent;
+        border: 1px solid {EMBR_BORDER};
+        border-radius: 4px;
+    }}
+    QScrollArea > QWidget > QWidget {{
+        background-color: {EMBR_SURFACE};
+    }}
+    QScrollBar:vertical {{
+        background: {EMBR_SURFACE};
+        width: 10px;
+        margin: 0;
+        border: none;
+    }}
+    QScrollBar::handle:vertical {{
+        background: #5A5C60;
+        border-radius: 4px;
+        min-height: 24px;
+    }}
+    QScrollBar::handle:vertical:hover {{
+        background: #6A6C70;
+    }}
+    QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical,
+    QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
+        height: 0;
+        background: none;
+    }}
+    QScrollBar:horizontal {{
+        background: {EMBR_SURFACE};
+        height: 10px;
+        margin: 0;
+        border: none;
+    }}
+    QScrollBar::handle:horizontal {{
+        background: #5A5C60;
+        border-radius: 4px;
+        min-width: 24px;
+    }}
+    QScrollBar::handle:horizontal:hover {{
+        background: #6A6C70;
+    }}
+    QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal,
+    QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {{
+        width: 0;
+        background: none;
+    }}
+    QAbstractItemView {{
+        outline: none;
+    }}
+    QMessageBox {{
+        background-color: {EMBR_BG};
+        color: {EMBR_TEXT};
+    }}
+    QMessageBox QLabel {{
+        color: {EMBR_TEXT};
+        background: transparent;
+    }}
     """
 
 
@@ -499,28 +607,56 @@ def apply_embr_theme(widget: Any) -> None:
 
 
 def _apply_rounded_mask(window: Any, radius: int = EMBR_WINDOW_RADIUS) -> None:
-    """Clip a frameless window to a rounded rectangle (including children)."""
-    from PySide6.QtCore import QEvent, QObject, QRectF
-    from PySide6.QtGui import QPainterPath, QRegion
+    """Clip a frameless window to a rounded rectangle (including children).
+
+    Uses a painted ``QBitmap`` mask instead of ``QPainterPath.toFillPolygon``,
+    which approximates curves with few segments and looks chamfered at small R.
+    """
+    from PySide6.QtCore import QEvent, QObject, Qt
+    from PySide6.QtGui import QBitmap, QPainter
 
     def update_mask() -> None:
         if window.isMaximized() or window.isFullScreen():
             window.clearMask()
             return
-        rect = QRectF(window.rect())
+        rect = window.rect()
         if rect.width() <= 0 or rect.height() <= 0:
             return
-        path = QPainterPath()
-        path.addRoundedRect(rect, float(radius), float(radius))
-        window.setMask(QRegion(path.toFillPolygon().toPolygon()))
+        dpr = float(getattr(window, "devicePixelRatioF", lambda: 1.0)())
+        w = max(1, int(round(rect.width() * dpr)))
+        h = max(1, int(round(rect.height() * dpr)))
+        bmp = QBitmap(w, h)
+        bmp.setDevicePixelRatio(dpr)
+        bmp.fill(Qt.GlobalColor.color0)
+        painter = QPainter(bmp)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(Qt.GlobalColor.color1)
+        # Inset by half a device pixel so the edge is not clipped harshly.
+        inset = 0.5 / dpr if dpr else 0.5
+        painter.drawRoundedRect(
+            inset,
+            inset,
+            float(rect.width()) - inset * 2.0,
+            float(rect.height()) - inset * 2.0,
+            float(radius),
+            float(radius),
+        )
+        painter.end()
+        window.setMask(bmp)
+
+    _mask_events = {
+        QEvent.Type.Resize,
+        QEvent.Type.WindowStateChange,
+        QEvent.Type.Show,
+    }
+    _sci = getattr(QEvent.Type, "ScreenChangeInternal", None)
+    if _sci is not None:
+        _mask_events.add(_sci)
 
     class _MaskFilter(QObject):
         def eventFilter(self, obj, event):  # noqa: N802
-            if event.type() in (
-                QEvent.Type.Resize,
-                QEvent.Type.WindowStateChange,
-                QEvent.Type.Show,
-            ):
+            if event.type() in _mask_events:
                 update_mask()
             return False
 
