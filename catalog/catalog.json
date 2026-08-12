@@ -6,15 +6,15 @@
     {
       "id": "embr",
       "name": "Embr Core",
-      "version": "0.2.1",
+      "version": "0.2.2",
       "kind": "library",
       "path": "scripts/embr",
       "min_flame": "2025.0",
-      "digest": "09f0ea462b2e4ea03ec6d7d14bf5355dc8ddb677b04172c9d70ece3c4f79cd83",
+      "digest": "f246c1009b5acb74aafdc64dac8984b2b6d52d330838b1bc32007d129ad38968",
       "files": [
         {
           "path": "__init__.py",
-          "sha256": "e570837f80da8570a7952a393939b4d0c7ff3c9afde7296230fcca1fd56b49cc"
+          "sha256": "9171886f84fe50ac26cc9e77aad891ccce9ca27ef30abb08626ce576dbed711f"
         },
         {
           "path": "assets/fonts/Figtree/Figtree-Bold.ttf",
@@ -62,7 +62,7 @@
         },
         {
           "path": "embr_menus.py",
-          "sha256": "5522345ff8c6717497d8b62eac13ecc7266482fb58d75a5620cfe342211e2da0"
+          "sha256": "3f69e56cf6e26d03a7b7aea12c745831c057b6f34ed29fbdeb1d4474a3488f8c"
         },
         {
           "path": "embr_names.py",
@@ -89,15 +89,15 @@
     {
       "id": "embr_manager",
       "name": "Script Manager",
-      "version": "0.1.9",
+      "version": "0.1.10",
       "kind": "tool",
       "path": "scripts/embr_manager",
       "min_flame": "2025.0",
-      "digest": "2baa62e085f24dc83f508dc6b08b13728a6864fa8ac8fb59b540e8b6cf829b9f",
+      "digest": "0597bfc4edb0bb3d29b7c1a7760bbd5cb8778f2abdaa5a03dc1621aaec8cf38a",
       "files": [
         {
           "path": "embr_manager.py",
-          "sha256": "7ea436f63dfea1ec8b1d0383e9d9e31f1e416cba33b9d7ee77e1c60c574dca1d"
+          "sha256": "4626210c2947b45e73aa3ce18bd0a5b54aad5bee83eba1707fb0d0d93f9e0dc3"
         },
         {
           "path": "embr_sm_actions.py",
@@ -127,11 +127,11 @@
     {
       "id": "embr_preferences",
       "name": "Embr Preferences",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "kind": "tool",
       "path": "scripts/embr_preferences",
       "min_flame": "2025.0",
-      "digest": "94fb435c9a6419ab3de3c1a0c2d13e64bd4a7c7685361757918745bc348b46a4",
+      "digest": "7a2d1278e127ba1962110e36de6b13e4121806a81bd508c4acce0cc6f61d5d28",
       "files": [
         {
           "path": "embr_pref_window.py",
@@ -139,7 +139,7 @@
         },
         {
           "path": "embr_preferences.py",
-          "sha256": "c18c03df1f586b563053ae1a67ef1dbf285e7680478c97f174cdaf3921c8819e"
+          "sha256": "b3de0309c2656bf4099c657336fe5b2c6da918465f225b83eab6f763821e0934"
         }
       ],
       "depends": [

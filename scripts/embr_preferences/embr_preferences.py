@@ -12,7 +12,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 _DIR = Path(__file__).resolve().parent
 _SCRIPTS = _DIR.parent
@@ -67,16 +67,49 @@ def _open_preferences(_selection) -> None:
 
 
 def get_main_menu_custom_ui_actions():
-    from embr import menus
+    """Register Preferences under Main Menu → Embr.
 
-    return menus.group(
-        "main_menu",
-        [
-            menus.action(
-                "main_menu",
-                "preferences",
-                caption="Preferences",
-                execute=_open_preferences,
-            ),
-        ],
-    )
+    Import ``embr_menus`` by basename (Flame-safe). Never raise — failing hooks
+    would drop the Embr submenu when combined with other Embr tools.
+    """
+    _ensure_import_paths()
+    try:
+        import embr_menus as menus
+
+        built = menus.group(
+            "main_menu",
+            [
+                menus.action(
+                    "main_menu",
+                    "preferences",
+                    caption="Preferences",
+                    execute=_open_preferences,
+                ),
+            ],
+        )
+        if built:
+            return built
+    except Exception:
+        try:
+            import embr_log as log
+
+            log.error(
+                "Embr Preferences: menu build failed; using fallback entry.",
+                duration=8,
+            )
+        except Exception:
+            pass
+
+    return [
+        {
+            "name": "Embr",
+            "actions": [
+                {
+                    "name": "Preferences",
+                    "execute": _open_preferences,
+                    "minimumVersion": "2025.0.0.0",
+                    "order": 200,
+                }
+            ],
+        }
+    ]

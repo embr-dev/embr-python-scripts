@@ -97,6 +97,14 @@ def load_defaults() -> dict[str, Any]:
     return data
 
 
+def _defaults_or_empty() -> dict[str, Any]:
+    """Return defaults, or an empty surfaces map if the file is missing/broken."""
+    try:
+        return load_defaults()
+    except MenuError:
+        return {"schema": 1, "surfaces": {}}
+
+
 def load_prefs(config_root: Path | None = None) -> dict[str, Any]:
     """Load user prefs; missing or invalid file yields empty menus prefs."""
     path = prefs_path(config_root)
@@ -171,7 +179,7 @@ def set_surface_prefs(
 
 
 def _default_entries(surface: str) -> list[dict[str, Any]]:
-    data = load_defaults()
+    data = _defaults_or_empty()
     raw = (data.get("surfaces") or {}).get(surface) or []
     if not isinstance(raw, list):
         return []
@@ -311,7 +319,7 @@ def group(
 
 def surfaces_with_entries() -> list[str]:
     """Return surfaces that have at least one default entry (for Preferences)."""
-    data = load_defaults()
+    data = _defaults_or_empty()
     surfaces = data.get("surfaces") or {}
     result: list[str] = []
     for surface in SURFACES:

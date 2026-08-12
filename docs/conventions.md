@@ -87,15 +87,19 @@ docs/                   # ドキュメント（日本語）
 ```python
 from __future__ import annotations
 
-from embr import log, menus, version
-
+# At top of hook file, put embr/ and install root on sys.path (see embr_manager.py).
 
 def _run(_selection) -> None:
+    import embr_log as log
+    import embr_version as version
+
     version.require_min("2025.0")
     log.info("Embr: hello")
 
 
 def get_timeline_custom_ui_actions():
+    import embr_menus as menus  # basename import — avoid ``from embr import menus`` in hooks
+
     return menus.group(
         "timeline",
         [
@@ -109,6 +113,8 @@ def get_timeline_custom_ui_actions():
         ],
     )
 ```
+
+フック入口では **`from embr import …` より `import embr_menus` 等の basename import** を優先する（Flame の hooks 読み込みと相性が良い）。メニュー構築は失敗してもホストを落とさない／可能ならフォールバック項目を返す。
 
 詳細は [api/hooks.md](./api/hooks.md)。
 
