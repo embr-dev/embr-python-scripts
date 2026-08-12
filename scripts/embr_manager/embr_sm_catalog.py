@@ -117,10 +117,8 @@ def ref_for_channel(channel: str | None) -> str:
 
 
 def channel_label(channel: str) -> str:
-    """Short UI label for a channel."""
-    name = normalize_channel(channel)
-    hint = CHANNEL_HINTS.get(name, "")
-    return f"{name} ({hint})" if hint else name
+    """Short UI label for a channel (stable / latest / dev)."""
+    return normalize_channel(channel)
 
 
 def parse_catalog(data: dict[str, Any]) -> Catalog:

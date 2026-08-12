@@ -9,10 +9,10 @@ from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
     QMessageBox,
     QPushButton,
-    QStatusBar,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -34,6 +34,15 @@ from embr_sm_catalog import (
     normalize_channel,
 )
 
+# Column indices
+_COL_NAME = 0
+_COL_STATUS = 1
+_COL_LOCAL = 2
+_COL_REMOTE = 3
+
+_COL_STATUS_W = 140
+_COL_VERSION_W = 88
+
 
 class ScriptManagerWindow(QDialog):
     def __init__(
@@ -50,6 +59,7 @@ class ScriptManagerWindow(QDialog):
         self._catalog_path = catalog_path
         self._source_root = source_root
         self._catalog: Catalog | None = None
+        self._rows_by_id: dict[str, dict[str, str]] = {}
         if channel is not None:
             self._channel = normalize_channel(channel)
         else:
@@ -73,6 +83,7 @@ class ScriptManagerWindow(QDialog):
 
         meta.addWidget(QLabel("Channel:"))
         self._channel_combo = QComboBox()
+        self._channel_combo.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         for name in CHANNEL_ORDER:
             self._channel_combo.addItem(channel_label(name), name)
         idx = self._channel_combo.findData(self._channel)
@@ -94,43 +105,53 @@ class ScriptManagerWindow(QDialog):
         self._table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self._table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
         self._table.setAlternatingRowColors(True)
-        self._table.horizontalHeader().setStretchLastSection(True)
+        self._table.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
+        header = self._table.horizontalHeader()
+        header.setStretchLastSection(False)
+        header.setSectionResizeMode(_COL_NAME, QHeaderView.ResizeMode.Stretch)
+        header.setSectionResizeMode(_COL_STATUS, QHeaderView.ResizeMode.Fixed)
+        header.setSectionResizeMode(_COL_LOCAL, QHeaderView.ResizeMode.Fixed)
+        header.setSectionResizeMode(_COL_REMOTE, QHeaderView.ResizeMode.Fixed)
+        self._table.setColumnWidth(_COL_STATUS, _COL_STATUS_W)
+        self._table.setColumnWidth(_COL_LOCAL, _COL_VERSION_W)
+        self._table.setColumnWidth(_COL_REMOTE, _COL_VERSION_W)
         body.addWidget(self._table)
 
         buttons = QHBoxLayout()
         self._btn_refresh = QPushButton("Refresh")
-        self._btn_install = QPushButton("Install")
-        self._btn_install.setObjectName("embrAccent")
-        self._btn_update = QPushButton("Update")
+        self._btn_install_update = QPushButton("Install / Update")
+        self._btn_install_update.setObjectName("embrAccent")
         self._btn_repair = QPushButton("Repair")
         self._btn_uninstall = QPushButton("Uninstall")
         for btn in (
             self._btn_refresh,
-            self._btn_install,
-            self._btn_update,
+            self._btn_install_update,
             self._btn_repair,
             self._btn_uninstall,
         ):
+            btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
             buttons.addWidget(btn)
         buttons.addStretch(1)
         body.addLayout(buttons)
 
-        self._status = QStatusBar()
-        body.addWidget(self._status)
-
         layout.addLayout(body)
+
+        self._status = QLabel()
+        self._status.setObjectName("embrStatus")
+        self._status.setWordWrap(False)
+        layout.addWidget(self._status)
 
         self.resize(780, 480)
 
         self._btn_refresh.clicked.connect(self.refresh)
-        self._btn_install.clicked.connect(lambda: self._run_action("install"))
-        self._btn_update.clicked.connect(lambda: self._run_action("update"))
+        self._btn_install_update.clicked.connect(self._run_install_or_update)
         self._btn_repair.clicked.connect(lambda: self._run_action("repair"))
         self._btn_uninstall.clicked.connect(lambda: self._run_action("uninstall"))
+        self._table.itemSelectionChanged.connect(self._update_action_buttons)
 
         font_err = embr_ui.font_load_error()
         if font_err:
-            self._status.showMessage(font_err)
+            self._status.setText(font_err)
 
         self._persist_channel()
         self._update_root_label()
@@ -148,13 +169,42 @@ class ScriptManagerWindow(QDialog):
         self.refresh()
 
     def _update_root_label(self) -> None:
-        label = paths.describe_install_root(self._root)
-        self._root_label.setText(f"Install root: {label}  ({self._root})")
+        self._root_label.setText(f"Install root: {paths.describe_install_root(self._root)}")
 
     def _load_catalog(self) -> Catalog:
         if self._catalog_path is not None:
             return load_catalog_from_path(str(self._catalog_path))
         return fetch_catalog_for_channel(self._channel)
+
+    def _selected_rows(self) -> list[dict[str, str]]:
+        rows: list[dict[str, str]] = []
+        for idx in self._table.selectionModel().selectedRows():
+            item = self._table.item(idx.row(), _COL_NAME)
+            if item is None:
+                continue
+            pkg_id = item.data(Qt.ItemDataRole.UserRole)
+            if not pkg_id:
+                continue
+            row = self._rows_by_id.get(str(pkg_id))
+            if row:
+                rows.append(row)
+        return rows
+
+    def _update_action_buttons(self) -> None:
+        selected = self._selected_rows()
+        can_install_update = any(
+            r["status"]
+            in (local.STATUS_NOT_INSTALLED, local.STATUS_UPDATE_AVAILABLE)
+            for r in selected
+        )
+        can_repair = any(r["status"] == local.STATUS_CORRUPTED for r in selected)
+        can_uninstall = any(
+            r["status"] != local.STATUS_NOT_INSTALLED for r in selected
+        )
+        self._btn_refresh.setEnabled(True)
+        self._btn_install_update.setEnabled(can_install_update)
+        self._btn_repair.setEnabled(can_repair)
+        self._btn_uninstall.setEnabled(can_uninstall)
 
     def refresh(self) -> None:
         try:
@@ -162,14 +212,17 @@ class ScriptManagerWindow(QDialog):
             rows = actions.build_status_rows(self._catalog, self._root)
         except CatalogError as exc:
             QMessageBox.critical(self, "Embr Script Manager", str(exc))
-            self._status.showMessage(str(exc))
+            self._status.setText(str(exc))
+            self._update_action_buttons()
             return
         except Exception as exc:
             msg = f"Embr Script Manager: refresh failed - {exc}"
             QMessageBox.critical(self, "Embr Script Manager", msg)
-            self._status.showMessage(msg)
+            self._status.setText(msg)
+            self._update_action_buttons()
             return
 
+        self._rows_by_id = {row["id"]: row for row in rows}
         self._table.setRowCount(0)
         for row in rows:
             r = self._table.rowCount()
@@ -178,30 +231,63 @@ class ScriptManagerWindow(QDialog):
             for c, value in enumerate(values):
                 item = QTableWidgetItem(value)
                 item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                if c == 0:
+                if c == _COL_NAME:
                     item.setData(Qt.ItemDataRole.UserRole, row["id"])
                 self._table.setItem(r, c, item)
-        self._table.resizeColumnsToContents()
+        # Keep fixed Status/Local/Remote; Name stays Stretch (do not resizeToContents).
+        self._table.setColumnWidth(_COL_STATUS, _COL_STATUS_W)
+        self._table.setColumnWidth(_COL_LOCAL, _COL_VERSION_W)
+        self._table.setColumnWidth(_COL_REMOTE, _COL_VERSION_W)
         src = (
             f"local:{self._catalog_path.name}"
             if self._catalog_path is not None
             else f"channel:{self._channel}"
         )
-        self._status.showMessage(
+        self._status.setText(
             f"{src} · {self._catalog.repo}@{self._catalog.ref} — "
             f"{len(rows)} package(s)"
         )
+        self._update_action_buttons()
 
     def _selected_ids(self) -> list[str]:
-        ids: list[str] = []
-        for idx in self._table.selectionModel().selectedRows():
-            item = self._table.item(idx.row(), 0)
-            if item is None:
-                continue
-            pkg_id = item.data(Qt.ItemDataRole.UserRole)
-            if pkg_id:
-                ids.append(str(pkg_id))
-        return ids
+        return [r["id"] for r in self._selected_rows()]
+
+    def _run_install_or_update(self) -> None:
+        if self._catalog is None:
+            self.refresh()
+        if self._catalog is None:
+            return
+        selected = self._selected_rows()
+        if not selected:
+            return
+        try:
+            for row in selected:
+                pkg_id = row["id"]
+                status = row["status"]
+                if status == local.STATUS_NOT_INSTALLED:
+                    actions.install_package(
+                        self._catalog,
+                        pkg_id,
+                        self._root,
+                        source_root=self._source_root,
+                    )
+                elif status == local.STATUS_UPDATE_AVAILABLE:
+                    actions.update_package(
+                        self._catalog,
+                        pkg_id,
+                        self._root,
+                        source_root=self._source_root,
+                    )
+        except (actions.ActionError, CatalogError) as exc:
+            QMessageBox.critical(self, "Embr Script Manager", str(exc))
+            self._status.setText(str(exc))
+            return
+        except Exception as exc:
+            msg = f"Embr Script Manager: install/update failed - {exc}"
+            QMessageBox.critical(self, "Embr Script Manager", msg)
+            self._status.setText(msg)
+            return
+        self._after_action("install/update")
 
     def _run_action(self, action: str) -> None:
         if self._catalog is None:
@@ -210,11 +296,6 @@ class ScriptManagerWindow(QDialog):
             return
         ids = self._selected_ids()
         if not ids:
-            QMessageBox.information(
-                self,
-                "Embr Script Manager",
-                "Select one or more packages first.",
-            )
             return
 
         if action == "uninstall":
@@ -228,21 +309,7 @@ class ScriptManagerWindow(QDialog):
 
         try:
             for pkg_id in ids:
-                if action == "install":
-                    actions.install_package(
-                        self._catalog,
-                        pkg_id,
-                        self._root,
-                        source_root=self._source_root,
-                    )
-                elif action == "update":
-                    actions.update_package(
-                        self._catalog,
-                        pkg_id,
-                        self._root,
-                        source_root=self._source_root,
-                    )
-                elif action == "repair":
+                if action == "repair":
                     actions.repair_package(
                         self._catalog,
                         pkg_id,
@@ -253,22 +320,25 @@ class ScriptManagerWindow(QDialog):
                     actions.uninstall_package(self._catalog, pkg_id, self._root)
         except (actions.ActionError, CatalogError) as exc:
             QMessageBox.critical(self, "Embr Script Manager", str(exc))
-            self._status.showMessage(str(exc))
+            self._status.setText(str(exc))
             return
         except Exception as exc:
             msg = f"Embr Script Manager: {action} failed - {exc}"
             QMessageBox.critical(self, "Embr Script Manager", msg)
-            self._status.showMessage(msg)
+            self._status.setText(msg)
             return
 
+        self._after_action(action)
+
+    def _after_action(self, action: str) -> None:
         self.refresh()
-        self._status.showMessage(f"{action} completed")
+        self._status.setText(f"{action} completed")
         try:
             import embr_hooks as hooks
 
             hooks.refresh(invalidate=("embr", "embr_manager"))
         except Exception:
-            self._status.showMessage(
+            self._status.setText(
                 f"{action} completed — run Rescan Python Hooks if menus did not update"
             )
 
@@ -291,16 +361,6 @@ def open_script_manager() -> None:
         if paths.scripts_root().name == "scripts":
             catalog_path = candidate
             source_root = paths.scripts_root()
-
-    installed = bootstrap.is_bootstrapped(root)
-    vendor_candidates = [p for _, p in bootstrap.candidate_roots()]
-    on_vendor_tree = root in {p.resolve() for p in vendor_candidates} or (
-        root.name == paths.VENDOR_DIR_NAME
-    )
-
-    if not installed and not on_vendor_tree:
-        # Running from a transient hook path without Embr on disk target yet.
-        pass
 
     if not bootstrap.is_bootstrapped(root) and not (root / "embr").is_dir():
         chosen = bootstrap.prompt_bootstrap_choice_qt()

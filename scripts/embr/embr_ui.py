@@ -27,7 +27,7 @@ EMBR_MUTED = "#9B9DA1"
 EMBR_WINDOW_RADIUS = 6
 EMBR_TITLE_ICON_SIZE = 24
 EMBR_TITLE_BRAND_PT = 15
-EMBR_TITLE_BRAND_GAP = 5
+EMBR_TITLE_BRAND_GAP = 0
 
 # Back-compat aliases used by older call sites / docs
 EMBR_ASH = EMBR_BG
@@ -146,11 +146,22 @@ def stylesheet() -> str:
         color: {EMBR_TEXT};
         font-family: "{family}";
         font-size: 13px;
+        outline: none;
     }}
     QMainWindow, QDialog {{
         background-color: {EMBR_BG};
         border: none;
         outline: none;
+    }}
+    QPushButton:focus, QComboBox:focus, QTableWidget:focus, QHeaderView:focus {{
+        outline: none;
+    }}
+    QLabel#embrStatus {{
+        background-color: {EMBR_SURFACE};
+        color: {EMBR_MUTED};
+        border-top: 1px solid {EMBR_BORDER};
+        padding: 6px 12px;
+        font-size: 12px;
     }}
     QWidget#embrTitleBar {{
         background-color: {EMBR_SURFACE};
@@ -237,6 +248,9 @@ def stylesheet() -> str:
         background-color: {EMBR_SURFACE};
         color: {EMBR_MUTED};
         border-top: 1px solid {EMBR_BORDER};
+    }}
+    QStatusBar::item {{
+        border: none;
     }}
     """
 

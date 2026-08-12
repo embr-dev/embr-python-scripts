@@ -173,22 +173,18 @@ def is_hook_path_configured() -> bool:
 
 
 def describe_install_root(root: str | Path | None = None) -> str:
-    """Return a short label for an install root (User / Shared / Other)."""
+    """Return ``User (path)`` / ``Shared (path)`` / bare path."""
     path = Path(root).resolve() if root is not None else install_root().resolve()
     try:
         user = flame_user_python().resolve()
-        if path == user:
-            return "User python"
-        if path == (user / VENDOR_DIR_NAME):
-            return "User python / Embr"
+        if path == user or path == (user / VENDOR_DIR_NAME):
+            return f"User ({path})"
     except OSError:
         pass
     try:
         shared = flame_shared_python().resolve()
-        if path == shared:
-            return "Shared python"
-        if path == (shared / VENDOR_DIR_NAME):
-            return "Shared python / Embr"
+        if path == shared or path == (shared / VENDOR_DIR_NAME):
+            return f"Shared ({path})"
     except OSError:
         pass
     return str(path)

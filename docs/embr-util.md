@@ -45,8 +45,27 @@ hooks.refresh()  # embr を sys.modules から外してから Rescan
 | タイトルバー | `ui.prepare_embr_window` / `ui.create_title_bar`（icon+Embr \| タイトル \| min/max/close） |
 | ロゴ | `scripts/embr/assets/logo/` |
 | Figtree (OFL) | `scripts/embr/assets/fonts/Figtree/` |
+| UI アイコン | **Material Icons / Material Symbols**（下記） |
 
 Satoshi はランタイムで使わない。UI は必ず `embr.ui` 経由。
+
+### Material Icons の入れ方（方針）
+
+PySide6 では次のどちらか（推奨はフォント同梱）:
+
+1. **フォント（推奨）**  
+   - [Google Material Icons](https://github.com/google/material-design-icons) の `MaterialIcons-Regular.ttf`（または Material Symbols）を  
+     `scripts/embr/assets/fonts/MaterialIcons/` に同梱（ライセンスファイルも）。  
+   - `QFontDatabase.addApplicationFont` で読み、コードポイント（例: `\ue5cd`）を `QLabel` / `QPushButton` に載せる。  
+   - Figtree と同様、`embr.ui` に `material_icon(name_or_codepoint, size)` を足す。
+
+2. **SVG**  
+   - 使うアイコンだけ SVG を `assets/icons/` に置き、既存の `logo_pixmap` と同様に `QSvgRenderer` で `QPixmap` / `QIcon` 化。  
+   - アイコン数が少ないとき向き。
+
+**やらないこと:** 実行時にネットからフォントを取る、システム依存のアイコン名だけに頼る。
+
+実装タイミング: タイトルバーやボタンにアイコンが必要になったらフォント同梱 + `embr.ui` ヘルパーを追加する。
 
 ## 動作確認
 

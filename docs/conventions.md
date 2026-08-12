@@ -155,6 +155,36 @@ Check the schematic selection and socket names in the UI.
 
 ---
 
+## 6.5 パッケージ・バージョニング（SemVer）
+
+カタログ / Script Manager が読む版は **`MAJOR.MINOR.PATCH`**（例: `0.1.0`）。  
+各パッケージの `__version__`（`embr/__init__.py` または `embr_<tool>.py`）を正とし、`tools/gen_catalog.py` が拾う。
+
+| 桁 | 上げるとき | 例 |
+|----|------------|-----|
+| **MAJOR** | 互換を破る変更（API・インストールレイアウト・state 形式など） | `1.0.0` → `2.0.0` |
+| **MINOR** | 後方互換の機能追加 | 新ツール、チャンネル、UI 機能 |
+| **PATCH** | 修正・調整・見た目の微変更・検証向けの直し | バグ修正、色・余白、文言、チェックサムずれ対策 |
+
+### チャンネルとの関係
+
+| チャンネル | 版の扱い |
+|------------|----------|
+| `dev` | 検証中。PATCH / MINOR を頻繁に上げてよい。壊れてもよい前提 |
+| `latest`（`main`） | 次の安定候補。MINOR 以上のまとまりを載せる |
+| `stable` | 配布用。意図した MAJOR.MINOR を固定し、緊急時のみ PATCH |
+
+### 運用ルール
+
+- **壊れる変更は必ず MAJOR**（または少なくとも MINOR + ドキュメント）。黙ってレイアウトを変えない。
+- UI だけの微調整は **PATCH**。
+- カタログを出したブランチでは、変更したパッケージの `__version__` を上げてから `gen_catalog.py`。
+- `0.x.y` の間は「安定前」。`1.0.0` で初回 stable 配布の目安。
+
+Flame 本体の最低版は別途 `min_flame` / `version.require_min("2025.0")`（パッケージ SemVer とは独立）。
+
+---
+
 ## 7. クロスプラットフォーム（macOS + Rocky Linux）
 
 | 項目 | 規則 |
@@ -187,7 +217,9 @@ Check the schematic selection and socket names in the UI.
 - **PySide6 のみ**（PySide2 禁止）。
 - 足りるなら Flame 組み込み（`flame.messages.show_in_dialog` / `flame.PyBrowser` など）。
 - 独自 Qt は必要なときだけ。表示文言は英語。
-- **ブランド**: Ash + Ember 色、**Figtree**（同梱 OFL）、ロゴは `embr.ui`。Satoshi は使わない。
+- **ブランド**: 無彩色 chrome + Ember アクセント、**Figtree**（同梱 OFL）、ロゴは `embr.ui`。Satoshi は使わない。
+- フォーカスの点線枠は出さない（`outline: none` / ボタンは `NoFocus`）。
+- UI アイコンは Material Icons（同梱方針は [embr-util.md](./embr-util.md)）。
 - 公開ツールは `catalog/catalog.json` に登録（`python3 tools/gen_catalog.py`）。詳細は [script-manager.md](./script-manager.md)。
 
 ---

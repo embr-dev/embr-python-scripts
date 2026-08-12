@@ -45,6 +45,8 @@ Shared に書けない場合は権限昇格せず、英語で理由と対処（U
 | `latest` | `main` | main 先端 |
 | `dev` | `dev` | 検証・プレリリース（既定） |
 
+UI の表示名も **`stable` / `latest` / `dev`** のみ（説明文は付けない）。
+
 選択は `…/Embr/.embr/state.json` の `channel` に保存。UI の Channel で切替 → Refresh。
 
 初回シード（マシンに Embr が無いとき）:

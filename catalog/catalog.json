@@ -10,7 +10,7 @@
       "kind": "library",
       "path": "scripts/embr",
       "min_flame": "2025.0",
-      "digest": "45a6358f29ce77397532270b8c73c8c7ea2117166c6c5747f5b517ea90d0e5e7",
+      "digest": "6c70a9de1c7bbf62e30a3a6ef8bbaf8b794759e6153da8bf208d76136fc29055",
       "files": [
         {
           "path": "__init__.py",
@@ -58,11 +58,11 @@
         },
         {
           "path": "embr_paths.py",
-          "sha256": "8fe5ada4f1b8b0798600dafeed5705f7de3bbdf3d51ae0ebb37d849fafd38128"
+          "sha256": "7586b2a8423aebfd9ce48773d203e214d05f115d7d1cbdbc0893d578f6872de4"
         },
         {
           "path": "embr_ui.py",
-          "sha256": "b6cea433ea11f7bb5d6e7d219e72982a3027d822ccd04607174a5ce501f3a93c"
+          "sha256": "63119437b6e4aa06a113c53d24f153a4ae4993649fdbf296b8e60a2fe6e65dbb"
         },
         {
           "path": "embr_version.py",
@@ -77,7 +77,7 @@
       "kind": "tool",
       "path": "scripts/embr_manager",
       "min_flame": "2025.0",
-      "digest": "4268d8f13748947d3dba3bdd8b2d3300b4e66be4a8fe703636394b78af62b739",
+      "digest": "d733b4dc7a2a90633f95733946643f26ccc918e3ef81facec5a0665b65058971",
       "files": [
         {
           "path": "embr_manager.py",
@@ -93,7 +93,7 @@
         },
         {
           "path": "embr_sm_catalog.py",
-          "sha256": "2bc8d8dd68aa1a4e2dc3e2db37e6ddd7466bf1fc1b6c021acedcca34e344ca9c"
+          "sha256": "13ae56db619c2e532f24341250c31ed253b2923f66b1029b9ec1c3b8990aac3f"
         },
         {
           "path": "embr_sm_local.py",
@@ -101,7 +101,7 @@
         },
         {
           "path": "embr_sm_window.py",
-          "sha256": "6606f01b13b6840b8b46c746c288124ac6bbbb633bc1864a6d0c04d938817039"
+          "sha256": "c7ec6871ec8a97433e363fbd471e3c0165f6b7c3538fac169e92a282b0edb2b5"
         }
       ],
       "depends": [
