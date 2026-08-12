@@ -91,7 +91,8 @@ export DL_DEBUG_PYTHON_HOOKS=1
 | メニュー | Main Menu → Python → Rescan Python Hooks |
 | API | `flame.execute_shortcut("Rescan Python Hooks")`（Embr: `embr.hooks.refresh()`） |
 
-注意: Rescan は hook ファイルの再走査が主。すでに `import` 済みのパッケージ（`embr` など）は Python のモジュールキャッシュで古いままになり得る。Embr では `hooks.refresh()` が `sys.modules` から `embr` を外してから Rescan する。
+注意: Rescan は hook ファイルの再走査に加え、既ロードモジュールを **`importlib.reload`** する（ログ: `Reloading '…'`）。  
+Embr の `hooks.refresh()` は **既定で Rescan のみ**（`sys.modules` を消さない）。basename の `embr_*.py` を消してから Rescan すると `ImportError: module … not in sys.modules` が連発する。
 
 ---
 

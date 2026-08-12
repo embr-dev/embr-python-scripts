@@ -37,7 +37,7 @@ print(paths.flame_user_python(), paths.flame_shared_python())
 # return menus.group("timeline", [menus.action("timeline", "rename_segments", ...)])
 
 # 開発中に embr を直したあと:
-hooks.refresh()  # embr を sys.modules から外してから Rescan
+hooks.refresh()  # Flame Rescan only — do not wipe basename modules from sys.modules
 ```
 
 ### メニュー（`embr.menus`）
@@ -50,6 +50,15 @@ hooks.refresh()  # embr を sys.modules から外してから Rescan
 | `menus.set_surface_prefs` / `reset_menu_prefs` | prefs 書き込み |
 
 デフォルト表: `scripts/embr/menus/defaults.json`。ユーザー設定: [preferences.md](./preferences.md)。
+
+### hooks 再読込
+
+| する | しない |
+|------|--------|
+| `hooks.refresh()`（Rescan のみ） | 起動のたびに `del sys.modules["embr_*"]` |
+| 開発中のコード変更後は Rescan | Rescan 直前に basename モジュールを消す（`ImportError: module … not in sys.modules` の原因） |
+
+Flame は Rescan 時に `[PYTHON HOOK] Reloading '…'` で `importlib.reload` する。`sys.modules` 上のオブジェクトと一致している必要がある。
 
 ## ブランド資産
 

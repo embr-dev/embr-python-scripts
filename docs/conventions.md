@@ -132,7 +132,7 @@ from embr import log, version, names, paths, hooks, ui, menus
 | バージョン | 入口で `version.require_min("2025.0")` を推奨 |
 | ログ | ユーザー向けは `embr.log`（文言は英語） |
 | コンソール文字 | Flame コンソール向けは **ASCII 寄り**（非 ASCII は文字化け実績あり） |
-| util 変更後 | `hooks.refresh()`（必要なら `invalidate=("embr",)`） |
+| util 変更後 | Main Menu → Python → **Rescan Python Hooks**（または `hooks.refresh()`）。通常は `sys.modules` を消さない |
 | メニュー | **`embr.menus`**（defaults + prefs）。`order` / ユーザー非表示を手で書かない |
 | UI | 色・フォント・ロゴは **`embr.ui` 経由のみ**（直書き禁止） |
 | PyFlame | **使わない・コピーしない**（[pyflame-reference.md](./pyflame-reference.md)） |

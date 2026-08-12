@@ -13,7 +13,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-__version__ = "0.1.11"
+__version__ = "0.1.12"
 
 _DIR = Path(__file__).resolve().parent
 _SCRIPTS = _DIR.parent
@@ -33,11 +33,9 @@ _ensure_import_paths()
 
 
 def _open_manager(_selection) -> None:
-    import importlib
-
     _ensure_import_paths()
 
-    # Reuse an open window before reloading modules (avoids duplicate UIs).
+    # Reuse an open window (avoids duplicate UIs and skip re-import cost).
     try:
         from PySide6.QtWidgets import QApplication
 
@@ -54,25 +52,8 @@ def _open_manager(_selection) -> None:
     except Exception:
         pass
 
-    # Drop stale helper modules only (keep this hook module).
-    for name in list(sys.modules):
-        if name.startswith("embr_sm_") or name in {
-            "embr_paths",
-            "embr_log",
-            "embr_hooks",
-            "embr_names",
-            "embr_version",
-            "embr_ui",
-            "embr_menus",
-        }:
-            del sys.modules[name]
-        if name == "embr" or name.startswith("embr."):
-            del sys.modules[name]
-
-    importlib.invalidate_caches()
-    _ensure_import_paths()
-
-    # Import helpers by unique basename — do not rely on package relative imports.
+    # Do not wipe sys.modules here — Flame Rescan uses importlib.reload on the
+    # same module objects; deleting them first floods the log with ImportError.
     import embr_log as log
     import embr_version as version
 

@@ -404,12 +404,14 @@ class ScriptManagerWindow(QDialog):
             )
 
     def _rescan_python_hooks(self) -> bool:
-        """Invalidate Embr modules and run Flame Rescan. Return True on success."""
+        """Run Flame Rescan (lets Flame reload hook modules from disk)."""
         self._set_busy(True, "Rescanning Python Hooks…")
         try:
             import embr_hooks as hooks
 
-            hooks.refresh(invalidate=("embr", "embr_manager"))
+            # No sys.modules wipe — Flame Reloading + importlib.reload needs the
+            # same module objects to stay registered.
+            hooks.refresh()
             return True
         except Exception:
             return False
@@ -545,7 +547,7 @@ class ScriptManagerWindow(QDialog):
         try:
             import embr_hooks as hooks
 
-            hooks.refresh(invalidate=("embr", "embr_manager"))
+            hooks.refresh()
             self._set_status(f"{done} {self._idle_status()}")
         except Exception:
             self._set_status(

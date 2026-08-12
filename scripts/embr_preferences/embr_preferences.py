@@ -12,7 +12,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 
 _DIR = Path(__file__).resolve().parent
 _SCRIPTS = _DIR.parent
@@ -32,8 +32,6 @@ _ensure_import_paths()
 
 
 def _open_preferences(_selection) -> None:
-    import importlib
-
     _ensure_import_paths()
 
     try:
@@ -52,23 +50,7 @@ def _open_preferences(_selection) -> None:
     except Exception:
         pass
 
-    for name in list(sys.modules):
-        if name.startswith("embr_pref_") or name in {
-            "embr_paths",
-            "embr_log",
-            "embr_hooks",
-            "embr_names",
-            "embr_version",
-            "embr_ui",
-            "embr_menus",
-        }:
-            del sys.modules[name]
-        if name == "embr" or name.startswith("embr."):
-            del sys.modules[name]
-
-    importlib.invalidate_caches()
-    _ensure_import_paths()
-
+    # Do not wipe sys.modules — see embr_manager._open_manager.
     import embr_log as log
     import embr_version as version
 

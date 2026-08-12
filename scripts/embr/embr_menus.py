@@ -330,7 +330,7 @@ def surfaces_with_entries() -> list[str]:
 
 
 def refresh_hooks_after_prefs() -> None:
-    """Invalidate Embr imports and rescan Flame hooks."""
+    """Rescan Flame hooks so menu order/visibility updates."""
     import embr_hooks as hooks
 
-    hooks.refresh(invalidate=("embr",))
+    hooks.refresh()
