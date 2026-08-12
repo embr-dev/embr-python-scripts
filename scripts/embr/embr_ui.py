@@ -457,7 +457,8 @@ def stylesheet(*, combo_arrow_url: str | None = None) -> str:
         background-color: {EMBR_SURFACE_RAISED};
         color: {EMBR_TEXT};
         border: 1px solid {EMBR_BORDER};
-        padding: 8px 14px;
+        /* Match QLineEdit vertical padding so inline rows share one height. */
+        padding: 6px 14px;
         border-radius: 4px;
     }}
     QPushButton:hover {{
@@ -467,8 +468,8 @@ def stylesheet(*, combo_arrow_url: str | None = None) -> str:
     QPushButton:pressed {{
         background-color: #222326;
         border-color: {EMBR_EMBER};
-        padding-top: 9px;
-        padding-bottom: 7px;
+        padding-top: 7px;
+        padding-bottom: 5px;
     }}
     QPushButton#embrAccent {{
         background-color: {EMBR_EMBER};
