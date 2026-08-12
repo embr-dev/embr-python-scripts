@@ -759,7 +759,7 @@ def style_combo(combo: Any) -> None:
             color: {EMBR_TEXT};
             border: none;
             outline: none;
-            padding: 2px;
+            padding: 0px;
         }}
         """
     )
@@ -791,6 +791,30 @@ def style_combo(combo: Any) -> None:
                 continue
             child.hide()
             child.setFixedHeight(0)
+            child.setMaximumHeight(0)
+
+    def _compact_popup_layout(popup: Any) -> None:
+        """Remove the container's top/bottom spacers that shift the list down."""
+        from PySide6.QtWidgets import QSizePolicy
+
+        lay = popup.layout()
+        if lay is None:
+            return
+        lay.setContentsMargins(1, 1, 1, 1)
+        lay.setSpacing(0)
+        for i in range(lay.count()):
+            item = lay.itemAt(i)
+            if item is None:
+                continue
+            spacer = item.spacerItem()
+            if spacer is not None:
+                spacer.changeSize(
+                    0,
+                    0,
+                    QSizePolicy.Policy.Fixed,
+                    QSizePolicy.Policy.Fixed,
+                )
+        _hide_combo_scrollers(popup)
 
     def _fit_popup() -> None:
         try:
@@ -817,12 +841,14 @@ def style_combo(combo: Any) -> None:
             }}
             """
         )
+        _compact_popup_layout(popup)
         target_w = max(int(combo.width()), 1)
         rows = min(int(combo.count()), int(combo.maxVisibleItems()))
         row_h = _row_height(active_view)
         content_h = row_h * max(rows, 1)
-        view_h = content_h + 4
-        popup_h = view_h + 2
+        # Tight fit: list height == rows; 1px frame margins on the container.
+        view_h = content_h
+        popup_h = content_h + 2
         fits = combo.count() <= combo.maxVisibleItems()
         active_view.setVerticalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAlwaysOff
@@ -834,7 +860,7 @@ def style_combo(combo: Any) -> None:
         popup.setMaximumSize(16777215, 16777215)
         popup.setFixedSize(target_w, popup_h)
         if fits:
-            _hide_combo_scrollers(popup)
+            _compact_popup_layout(popup)
             bar = active_view.verticalScrollBar()
             guard = 0
             while bar.maximum() > 0 and guard < 8:
@@ -842,7 +868,7 @@ def style_combo(combo: Any) -> None:
                 popup_h = view_h + 2
                 active_view.setFixedHeight(view_h)
                 popup.setFixedSize(target_w, popup_h)
-                _hide_combo_scrollers(popup)
+                _compact_popup_layout(popup)
                 guard += 1
 
     _orig = combo.showPopup
