@@ -32,8 +32,12 @@ Early setup. Hooks / util は `scripts/`。規約は [docs/conventions.md](./doc
 配布相当（チャンネル `dev` から User `python/Embr` へ）:
 
 ```bash
-/opt/Autodesk/python/2025/bin/python3 tools/bootstrap_from_channel.py --channel dev
+git clone -b dev https://github.com/embr-dev/embr-python-scripts.git
+cd embr-python-scripts
+"$(./tools/find_flame_python.sh)" tools/bootstrap_from_channel.py --channel dev
 ```
+
+（`/opt/Autodesk/python/2025` は無い環境が多い。実体は `2025.2.7` のようなマイナー付きフォルダ。）
 
 詳細: [docs/script-manager.md](./docs/script-manager.md)。
 

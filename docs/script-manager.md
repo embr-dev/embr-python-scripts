@@ -50,9 +50,13 @@ Shared に書けない場合は権限昇格せず、英語で理由と対処（U
 初回シード（マシンに Embr が無いとき）:
 
 ```bash
-/opt/Autodesk/python/2025/bin/python3 tools/bootstrap_from_channel.py --channel dev
+git clone -b dev https://github.com/embr-dev/embr-python-scripts.git
+cd embr-python-scripts
+"$(./tools/find_flame_python.sh)" tools/bootstrap_from_channel.py --channel dev
 # Shared:  … --channel dev --shared
 ```
+
+`find_flame_python.sh` は `/opt/Autodesk/python/2025.2.7` のような **マイナー付き** パスから最新の `bin/python3` を選ぶ（`…/python/2025` は無いことが多い）。
 
 その後は **通常起動**（`DL_PYTHON_HOOK_PATH` なし）→ Rescan → Embr → Script Manager。
 
@@ -115,7 +119,7 @@ Flame ツールの UI は **`embr.ui` 経由のみ**。
 ### Flame 外（自動）
 
 ```bash
-PYTHONPATH=scripts /opt/Autodesk/python/2025/bin/python3 tools/test_script_manager.py
+PYTHONPATH=scripts "$(./tools/find_flame_python.sh)" tools/test_script_manager.py
 ```
 
 ### Flame 内（手動・配布相当）

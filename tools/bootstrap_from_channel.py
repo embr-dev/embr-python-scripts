@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
 """Bootstrap Embr from a GitHub channel into User or Shared python/Embr.
 
-Example (Flame Python):
+Example:
 
-  /opt/Autodesk/python/2025/bin/python3 tools/bootstrap_from_channel.py --channel dev
-  /opt/Autodesk/python/2025/bin/python3 tools/bootstrap_from_channel.py --channel dev --shared
+  # Auto-pick newest Flame Python (handles 2025.2.7 style paths):
+  "$(./tools/find_flame_python.sh)" tools/bootstrap_from_channel.py --channel dev
 
-Then start Flame normally (no DL_PYTHON_HOOK_PATH), Rescan Python Hooks,
-and open Main Menu → Embr → Script Manager.
+  # Or call a versioned interpreter directly:
+  /opt/Autodesk/python/2025.2.7/bin/python3 tools/bootstrap_from_channel.py --channel dev
+
+  # Shared install:
+  "$(./tools/find_flame_python.sh)" tools/bootstrap_from_channel.py --channel dev --shared
+
+System ``python3`` (3.9+) is also fine for this script; Flame's python is
+only required for PySide6 UI tests / in-app use.
 """
 
 from __future__ import annotations
