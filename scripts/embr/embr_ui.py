@@ -686,15 +686,19 @@ def style_combo(combo: Any) -> None:
 
     On macOS the default style can use a native menu (checkmark + scroll
     chevron, wrong first-open height). Force Fusion for a Qt popup that
-    respects Embr QSS. Size the popup to the combo width and content height
-    so the first open matches later opens (no leftover scroll arrow).
-
-    Popup windows do not inherit the parent dialog stylesheet, so the view
-    gets an explicit Embr stylesheet + palette here.
+    we can size ourselves. Popup windows do not inherit the parent dialog
+    stylesheet, and Fusion often ignores item QSS — paint selection via a
+    small item delegate instead.
     """
-    from PySide6.QtCore import QTimer, Qt
-    from PySide6.QtGui import QColor, QPalette
-    from PySide6.QtWidgets import QFrame, QStyleFactory
+    from PySide6.QtCore import QSize, QTimer, Qt
+    from PySide6.QtGui import QColor, QPainter, QPalette
+    from PySide6.QtWidgets import (
+        QFrame,
+        QStyle,
+        QStyleFactory,
+        QStyledItemDelegate,
+        QStyleOptionViewItem,
+    )
 
     if getattr(combo, "_embr_combo_styled", False):
         return
@@ -717,30 +721,45 @@ def style_combo(combo: Any) -> None:
         pass
     combo.setMaxVisibleItems(12)
 
+    class _EmbrComboDelegate(QStyledItemDelegate):
+        def paint(self, painter: QPainter, option, index) -> None:  # noqa: N802
+            opt = QStyleOptionViewItem(option)
+            self.initStyleOption(opt, index)
+            selected = bool(opt.state & QStyle.StateFlag.State_Selected)
+            hovered = bool(opt.state & QStyle.StateFlag.State_MouseOver)
+            painter.save()
+            if selected:
+                painter.fillRect(opt.rect, QColor(EMBR_EMBER_DEEP))
+            elif hovered:
+                painter.fillRect(opt.rect, QColor(EMBR_SURFACE_RAISED))
+            else:
+                painter.fillRect(opt.rect, QColor(EMBR_SURFACE))
+            painter.setPen(QColor(EMBR_TEXT))
+            text = index.data(Qt.ItemDataRole.DisplayRole)
+            painter.drawText(
+                opt.rect.adjusted(8, 0, -8, 0),
+                int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft),
+                str(text if text is not None else ""),
+            )
+            painter.restore()
+
+        def sizeHint(self, option, index):  # noqa: N802
+            hint = super().sizeHint(option, index)
+            return QSize(hint.width(), max(int(hint.height()), 28))
+
+    delegate = _EmbrComboDelegate(view)
+    view.setItemDelegate(delegate)
+    combo._embr_combo_delegate = delegate  # type: ignore[attr-defined]
+
+    # No border on the view — the popup frame draws the single outline.
     view.setStyleSheet(
         f"""
         QListView {{
             background-color: {EMBR_SURFACE};
             color: {EMBR_TEXT};
-            border: 1px solid {EMBR_BORDER};
+            border: none;
             outline: none;
             padding: 2px;
-        }}
-        QListView::item {{
-            padding: 6px 8px;
-            min-height: 22px;
-            border: none;
-            border-radius: 3px;
-        }}
-        QListView::item:selected,
-        QListView::item:selected:active,
-        QListView::item:selected:!active {{
-            background-color: {EMBR_EMBER_DEEP};
-            color: {EMBR_TEXT};
-        }}
-        QListView::item:hover:!selected {{
-            background-color: {EMBR_SURFACE_RAISED};
-            color: {EMBR_TEXT};
         }}
         """
     )
@@ -762,12 +781,11 @@ def style_combo(combo: Any) -> None:
         popup = view.window()
         if popup is None or popup is combo:
             return
-        # One border only (on the list). Container must not draw its own frame.
         popup.setStyleSheet(
             f"""
             QFrame {{
                 background-color: {EMBR_SURFACE};
-                border: none;
+                border: 1px solid {EMBR_BORDER};
                 padding: 0px;
                 margin: 0px;
             }}
@@ -782,7 +800,7 @@ def style_combo(combo: Any) -> None:
             if fits
             else Qt.ScrollBarPolicy.ScrollBarAsNeeded
         )
-        view.setFixedWidth(target_w)
+        view.setFixedWidth(max(target_w - 2, 1))  # inset for the frame border
         view.setMinimumHeight(0)
         view.setMaximumHeight(16777215)
         popup.setMinimumSize(0, 0)
@@ -793,7 +811,7 @@ def style_combo(combo: Any) -> None:
     _orig = combo.showPopup
 
     def _show() -> None:
-        view.setMinimumWidth(max(int(combo.width()), 1))
+        view.setMinimumWidth(max(int(combo.width()) - 2, 1))
         _orig()
         _fit_popup()
         QTimer.singleShot(0, _fit_popup)
