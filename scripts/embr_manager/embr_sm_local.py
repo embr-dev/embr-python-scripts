@@ -9,11 +9,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from embr_sm_catalog import DEFAULT_CHANNEL
+
 STATE_DIR_NAME = ".embr"
 STATE_FILE_NAME = "state.json"
-
-# Keep default in sync with embr_sm_catalog.DEFAULT_CHANNEL.
-DEFAULT_CHANNEL = "dev"
 
 
 @dataclass

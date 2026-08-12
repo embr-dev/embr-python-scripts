@@ -21,11 +21,6 @@ CHANNELS: dict[str, str] = {
 }
 DEFAULT_CHANNEL = "dev"
 CHANNEL_ORDER = ("stable", "latest", "dev")
-CHANNEL_HINTS: dict[str, str] = {
-    "stable": "released",
-    "latest": "main tip",
-    "dev": "validation / pre-release",
-}
 
 
 class CatalogError(RuntimeError):
@@ -114,11 +109,6 @@ def normalize_channel(channel: str | None) -> str:
 def ref_for_channel(channel: str | None) -> str:
     """Map a channel name to its git ref."""
     return CHANNELS[normalize_channel(channel)]
-
-
-def channel_label(channel: str) -> str:
-    """Short UI label for a channel (stable / latest / dev)."""
-    return normalize_channel(channel)
 
 
 def parse_catalog(data: dict[str, Any]) -> Catalog:

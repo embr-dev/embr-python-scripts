@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import shutil
 import sys
 import tempfile
 from pathlib import Path
@@ -62,8 +63,6 @@ def main() -> None:
             raise AssertionError("expected protected uninstall to fail")
         except actions.ActionError:
             pass
-        import shutil
-
         shutil.rmtree(td_path / "embr_manager")
         shutil.rmtree(td_path / "embr")
         assert not (td_path / "embr").exists()

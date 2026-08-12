@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
+import hashlib
 import shutil
 import tempfile
 from pathlib import Path
 
 from embr_sm_catalog import (
     Catalog,
-    CatalogError,
     PackageInfo,
     fetch_bytes,
     raw_file_url,
@@ -20,17 +20,19 @@ class ActionError(RuntimeError):
     """Raised when a package action fails."""
 
 
+PROTECTED_FROM_UNINSTALL = frozenset({"embr", "embr_manager"})
+
+
 def _dependents(catalog: Catalog, package_id: str, state: local_mod.LocalState) -> list[str]:
+    """Return installed package ids that depend on ``package_id``."""
     found: list[str] = []
     for pkg in catalog.packages:
-        if package_id in pkg.depends and pkg.id in state.packages:
+        if (
+            pkg.id != package_id
+            and package_id in pkg.depends
+            and pkg.id in state.packages
+        ):
             found.append(pkg.id)
-    # Also check installed dirs that declare depends only via catalog
-    for installed_id in state.packages:
-        remote = catalog.by_id(installed_id)
-        if remote and package_id in remote.depends and installed_id != package_id:
-            if installed_id not in found:
-                found.append(installed_id)
     return found
 
 
@@ -45,7 +47,7 @@ def _download_package_tree(
         expected = entry.get("sha256", "")
         url = raw_file_url(catalog.repo, catalog.ref, f"{package.path}/{rel}")
         data = fetch_bytes(url)
-        digest = __import__("hashlib").sha256(data).hexdigest()
+        digest = hashlib.sha256(data).hexdigest()
         if expected and digest != expected:
             raise ActionError(
                 f"Embr Script Manager: checksum mismatch for {package.id}/{rel} - "
@@ -178,10 +180,7 @@ def repair_package(
     *,
     source_root: Path | None = None,
 ) -> None:
-    install_package(catalog, package_id, root, force=True, source_root=source_root)
-
-
-PROTECTED_FROM_UNINSTALL = frozenset({"embr", "embr_manager"})
+    update_package(catalog, package_id, root, source_root=source_root)
 
 
 def uninstall_package(

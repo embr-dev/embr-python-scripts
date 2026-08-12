@@ -174,12 +174,6 @@ def material_font(point_size: int = 18) -> Any:
     return font
 
 
-def material_icon_text(codepoint: str) -> str:
-    """Return a Material Icons glyph string (PUA codepoint)."""
-    _ensure_material_icons_loaded()
-    return codepoint
-
-
 def material_icon_pixmap(
     codepoint: str,
     pixel_size: int = 20,
@@ -492,7 +486,6 @@ def apply_no_focus_rect(widget: Any) -> None:
 
 def apply_embr_theme(widget: Any) -> None:
     """Apply Embr colors and Figtree to a Qt widget (typically a window)."""
-    _ensure_material_icons_loaded()
     arrow = material_icon_png_path(ICON_EXPAND_MORE, 16, color=EMBR_MUTED)
     # QSS url() wants forward slashes on all platforms.
     arrow_url = arrow.resolve().as_posix()
@@ -699,10 +692,3 @@ def prepare_embr_window(window: Any, title: str) -> Any:
     apply_embr_theme(window)
     _apply_rounded_mask(window, EMBR_WINDOW_RADIUS)
     return create_title_bar(window, title)
-
-
-def set_title_bar_title(title_bar: Any, title: str) -> None:
-    """Update the centered title text on a bar from ``create_title_bar``."""
-    label = getattr(title_bar, "_embr_title_label", None)
-    if label is not None:
-        label.setText(title)

@@ -30,13 +30,8 @@ def candidate_roots() -> list[tuple[str, Path]]:
     ]
 
 
-def is_bootstrapped(root: Path | None = None) -> bool:
-    """Return True if Embr Core is present at ``root`` (or this package tree)."""
-    if root is None:
-        try:
-            return (paths.package_dir() / "__init__.py").is_file()
-        except Exception:
-            return False
+def is_bootstrapped(root: Path) -> bool:
+    """Return True if Embr Core is present at ``root``."""
     return (root / "embr" / "__init__.py").is_file()
 
 

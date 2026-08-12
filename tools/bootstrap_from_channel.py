@@ -40,7 +40,7 @@ def main() -> int:
     parser.add_argument(
         "--shared",
         action="store_true",
-        help=f"Install under shared python/Embr instead of user python/Embr",
+        help="Install under shared python/Embr instead of user python/Embr",
     )
     parser.add_argument(
         "--source-root",

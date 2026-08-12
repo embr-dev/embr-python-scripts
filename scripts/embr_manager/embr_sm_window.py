@@ -31,7 +31,6 @@ from embr_sm_catalog import (
     CHANNEL_ORDER,
     Catalog,
     CatalogError,
-    channel_label,
     fetch_catalog_for_channel,
     load_catalog_from_path,
     normalize_channel,
@@ -45,9 +44,6 @@ _COL_REMOTE = 3
 
 _COL_STATUS_W = 140
 _COL_VERSION_W = 88
-
-# Core packages that must not be removed from the UI.
-_PROTECTED_UNINSTALL = frozenset({"embr", "embr_manager"})
 
 
 class ScriptManagerWindow(QDialog):
@@ -92,7 +88,7 @@ class ScriptManagerWindow(QDialog):
         self._channel_combo = QComboBox()
         self._channel_combo.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         for name in CHANNEL_ORDER:
-            self._channel_combo.addItem(channel_label(name), name)
+            self._channel_combo.addItem(name, name)
         idx = self._channel_combo.findData(self._channel)
         if idx < 0:
             idx = self._channel_combo.findData(local.DEFAULT_CHANNEL)
@@ -157,7 +153,6 @@ class ScriptManagerWindow(QDialog):
         layout.addWidget(self._status)
 
         self.resize(780, 480)
-        self._normal_size = self.size()
 
         self._btn_refresh.clicked.connect(self.refresh)
         self._btn_install_update.clicked.connect(self._run_install_or_update)
@@ -172,9 +167,6 @@ class ScriptManagerWindow(QDialog):
         self._persist_channel()
         self._update_root_label()
         self.refresh()
-
-    def _selection_count(self) -> int:
-        return len(self._table.selectionModel().selectedRows())
 
     def _channel_phrase(self) -> str:
         if self._catalog_path is not None:
@@ -204,7 +196,7 @@ class ScriptManagerWindow(QDialog):
             hint = "Update available."
         elif local.STATUS_CORRUPTED in statuses:
             hint = "Repair recommended."
-        elif all(r["id"] in _PROTECTED_UNINSTALL for r in selected):
+        elif all(r["id"] in actions.PROTECTED_FROM_UNINSTALL for r in selected):
             hint = "Core packages can’t be uninstalled here."
         elif local.STATUS_UP_TO_DATE in statuses:
             hint = "Up to date."
@@ -319,14 +311,14 @@ class ScriptManagerWindow(QDialog):
         can_repair = any(r["status"] == local.STATUS_CORRUPTED for r in selected)
         can_uninstall = any(
             r["status"] != local.STATUS_NOT_INSTALLED
-            and r["id"] not in _PROTECTED_UNINSTALL
+            and r["id"] not in actions.PROTECTED_FROM_UNINSTALL
             for r in selected
         )
         self._btn_refresh.setEnabled(True)
         self._btn_install_update.setEnabled(can_install_update)
         self._btn_repair.setEnabled(can_repair)
         self._btn_uninstall.setEnabled(can_uninstall)
-        if selected and all(r["id"] in _PROTECTED_UNINSTALL for r in selected):
+        if selected and all(r["id"] in actions.PROTECTED_FROM_UNINSTALL for r in selected):
             self._btn_uninstall.setToolTip(
                 "Embr Core and Script Manager cannot be uninstalled from the UI."
             )
@@ -449,8 +441,8 @@ class ScriptManagerWindow(QDialog):
             return
 
         if action == "uninstall":
-            removable = [i for i in ids if i not in _PROTECTED_UNINSTALL]
-            blocked = [i for i in ids if i in _PROTECTED_UNINSTALL]
+            removable = [i for i in ids if i not in actions.PROTECTED_FROM_UNINSTALL]
+            blocked = [i for i in ids if i in actions.PROTECTED_FROM_UNINSTALL]
             if not removable:
                 self._alert(
                     "Embr Core and Script Manager cannot be uninstalled from the UI."
@@ -537,7 +529,7 @@ def open_script_manager() -> None:
             catalog_path = candidate
             source_root = paths.scripts_root()
 
-    if not bootstrap.is_bootstrapped(root) and not (root / "embr").is_dir():
+    if not (root / "embr").is_dir():
         chosen = bootstrap.prompt_bootstrap_choice_qt()
         if chosen is None:
             return
