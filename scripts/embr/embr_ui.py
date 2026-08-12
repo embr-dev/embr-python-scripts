@@ -793,14 +793,19 @@ def style_combo(combo: Any) -> None:
             child.setFixedHeight(0)
             child.setMaximumHeight(0)
 
-    def _compact_popup_layout(popup: Any) -> None:
-        """Remove the container's top/bottom spacers that shift the list down."""
+    def _compact_popup_layout(popup: Any, *, inset: int = 2) -> None:
+        """Remove container spacers and keep a uniform inset inside the frame.
+
+        Measured gaps to the selection were L/T=2px but R/B=0px because the
+        list was sized to ``width-2`` / ``content`` while only left/top margins
+        applied. Use the same inset on all sides.
+        """
         from PySide6.QtWidgets import QSizePolicy
 
         lay = popup.layout()
         if lay is None:
             return
-        lay.setContentsMargins(1, 1, 1, 1)
+        lay.setContentsMargins(inset, inset, inset, inset)
         lay.setSpacing(0)
         for i in range(lay.count()):
             item = lay.itemAt(i)
@@ -841,34 +846,34 @@ def style_combo(combo: Any) -> None:
             }}
             """
         )
-        _compact_popup_layout(popup)
+        inset = 2  # logical px inside the frame on each side (was L/T=2, R/B=0)
+        _compact_popup_layout(popup, inset=inset)
         target_w = max(int(combo.width()), 1)
         rows = min(int(combo.count()), int(combo.maxVisibleItems()))
         row_h = _row_height(active_view)
         content_h = row_h * max(rows, 1)
-        # Tight fit: list height == rows; 1px frame margins on the container.
         view_h = content_h
-        popup_h = content_h + 2
+        popup_h = content_h + inset * 2
         fits = combo.count() <= combo.maxVisibleItems()
         active_view.setVerticalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAlwaysOff
             if fits
             else Qt.ScrollBarPolicy.ScrollBarAsNeeded
         )
-        active_view.setFixedSize(max(target_w - 2, 1), view_h)
+        active_view.setFixedSize(max(target_w - inset * 2, 1), view_h)
         popup.setMinimumSize(0, 0)
         popup.setMaximumSize(16777215, 16777215)
         popup.setFixedSize(target_w, popup_h)
         if fits:
-            _compact_popup_layout(popup)
+            _compact_popup_layout(popup, inset=inset)
             bar = active_view.verticalScrollBar()
             guard = 0
             while bar.maximum() > 0 and guard < 8:
                 view_h += row_h
-                popup_h = view_h + 2
+                popup_h = view_h + inset * 2
                 active_view.setFixedHeight(view_h)
                 popup.setFixedSize(target_w, popup_h)
-                _compact_popup_layout(popup)
+                _compact_popup_layout(popup, inset=inset)
                 guard += 1
 
     _orig = combo.showPopup
