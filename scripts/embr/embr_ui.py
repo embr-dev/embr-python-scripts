@@ -643,11 +643,13 @@ def stylesheet(*, combo_arrow_url: str | None = None) -> str:
         selection-background-color: {EMBR_EMBER_DEEP};
         selection-color: {EMBR_TEXT};
     }}
-    QFrame#embrHairline {{
-        background-color: {EMBR_BORDER};
+    QFrame#embrHairline,
+    QWidget#embrHairline {{
+        background-color: #3A3C40;
         border: none;
         max-height: 1px;
-        margin: {s1}px 0px;
+        margin-top: {s1}px;
+        margin-bottom: {s1}px;
     }}
     QWidget#embrReplaceHost {{
         background-color: {EMBR_SURFACE};

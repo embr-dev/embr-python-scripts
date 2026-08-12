@@ -8,7 +8,6 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
-    QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -32,11 +31,12 @@ def _section_label(text: str) -> QLabel:
     return lab
 
 
-def _hairline() -> QFrame:
-    line = QFrame()
+def _hairline() -> QWidget:
+    """1px rule — plain widget (QFrame HLine often paints ~2px)."""
+    line = QWidget()
     line.setObjectName("embrHairline")
-    line.setFrameShape(QFrame.Shape.HLine)
     line.setFixedHeight(1)
+    line.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
     return line
 
 
@@ -140,8 +140,14 @@ class RenameWindow(QDialog):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setWidget(replace_wrap)
-        scroll.setMinimumHeight(96)
-        scroll.setMaximumHeight(160)
+        # Fit three replace rows without scrolling (row 32 + spacing/margins + border).
+        _row_h = embr_ui.EMBR_CONTROL_MIN_HEIGHT + 2
+        _sp = embr_ui.EMBR_SPACE_2
+        _m = embr_ui.EMBR_SPACE_2
+        _rows = 3
+        replace_h = _rows * _row_h + (_rows - 1) * _sp + 2 * _m + 2
+        scroll.setMinimumHeight(replace_h)
+        scroll.setMaximumHeight(max(replace_h, 200))
         body.addWidget(scroll, 1)
 
         # --- Actions ---
