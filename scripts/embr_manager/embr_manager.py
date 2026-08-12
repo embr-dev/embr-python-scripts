@@ -13,7 +13,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-__version__ = "0.1.12"
+__version__ = "0.1.13"
 
 _DIR = Path(__file__).resolve().parent
 _SCRIPTS = _DIR.parent
@@ -70,14 +70,14 @@ def _open_manager(_selection) -> None:
 def get_main_menu_custom_ui_actions():
     """Register Script Manager under Main Menu -> Embr.
 
-    Import ``embr_menus`` by basename (Flame-safe). Never raise — an empty or
-    failing hook would remove the whole Embr submenu.
+    Import ``embr_menus`` by basename (Flame-safe). On build failure only, use a
+    static fallback. An empty group (user hid the item) must stay empty.
     """
     _ensure_import_paths()
     try:
         import embr_menus as menus
 
-        built = menus.group(
+        return menus.group(
             "main_menu",
             [
                 menus.action(
@@ -88,8 +88,6 @@ def get_main_menu_custom_ui_actions():
                 ),
             ],
         )
-        if built:
-            return built
     except Exception:
         try:
             import embr_log as log
@@ -100,17 +98,16 @@ def get_main_menu_custom_ui_actions():
             )
         except Exception:
             pass
-
-    return [
-        {
-            "name": "Embr",
-            "actions": [
-                {
-                    "name": "Script Manager",
-                    "execute": _open_manager,
-                    "minimumVersion": "2025.0.0.0",
-                    "order": 100,
-                }
-            ],
-        }
-    ]
+        return [
+            {
+                "name": "Embr",
+                "actions": [
+                    {
+                        "name": "Script Manager",
+                        "execute": _open_manager,
+                        "minimumVersion": "2025.0.0.0",
+                        "order": 100,
+                    }
+                ],
+            }
+        ]

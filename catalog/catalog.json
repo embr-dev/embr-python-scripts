@@ -89,15 +89,15 @@
     {
       "id": "embr_manager",
       "name": "Script Manager",
-      "version": "0.1.12",
+      "version": "0.1.13",
       "kind": "tool",
       "path": "scripts/embr_manager",
       "min_flame": "2025.0",
-      "digest": "42c3622dc6b428698e04bb3f3c1663f40519360dafd07eb4badfc2593ece82e6",
+      "digest": "b87718d802f0128deb82f0f87cbd0d277f05b3c5d92f2120e398de4e300e189b",
       "files": [
         {
           "path": "embr_manager.py",
-          "sha256": "644449486fafc8179b5d76898aa7f533e2fd203d09ba9266f8f04f008c439f83"
+          "sha256": "d717a1dfb37a895f79160664774ea24474ea888299a2040dace0f561c75faf5b"
         },
         {
           "path": "embr_sm_actions.py",
@@ -127,11 +127,11 @@
     {
       "id": "embr_preferences",
       "name": "Preferences",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "kind": "tool",
       "path": "scripts/embr_preferences",
       "min_flame": "2025.0",
-      "digest": "d0704eb09f934895bb8855b2c4ec9d59eac1f547900ef9a6892263120fa1d095",
+      "digest": "07c329635d3f5a3606dcec9c993a98bc9d2f51c5e8e70f472b1d03830a60d423",
       "files": [
         {
           "path": "embr_pref_window.py",
@@ -139,7 +139,7 @@
         },
         {
           "path": "embr_preferences.py",
-          "sha256": "7a6ecc4bd80750bd42eb9b7feb3289bc1863fa9a6b1107b87d6cd63ad98995c7"
+          "sha256": "a994ab8eaee10f931374336747ad541e2312a92af58929021021fef6e4344219"
         }
       ],
       "depends": [

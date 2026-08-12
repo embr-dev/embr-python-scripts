@@ -96,6 +96,23 @@ def main() -> None:
         assert group[0]["name"] == "Embr"
         assert [a["name"] for a in group[0]["actions"]] == ["Preferences"]
 
+        # Hidden-only contribution must be [] (hooks must not fall back to showing it).
+        assert (
+            menus.group(
+                "main_menu",
+                [
+                    menus.action(
+                        "main_menu",
+                        "script_manager",
+                        execute=_noop,
+                        caption="Script Manager",
+                        config_root=config_root,
+                    ),
+                ],
+            )
+            == []
+        )
+
         menus.reset_menu_prefs(config_root=config_root)
         restored = menus.effective_entries("main_menu", config_root=config_root)
         assert [e["id"] for e in restored] == ["script_manager", "preferences"]
