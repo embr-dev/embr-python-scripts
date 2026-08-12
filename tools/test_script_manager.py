@@ -84,6 +84,10 @@ def main() -> None:
     assert ref_for_channel("latest") == "main"
     assert set(CHANNELS) >= {"stable", "latest", "dev"}
 
+    from embr_sm_catalog import resolve_ref_sha
+
+    assert resolve_ref_sha("x/y", "a" * 40) == "a" * 40
+
     from PySide6.QtWidgets import QApplication
 
     app = QApplication.instance() or QApplication([])

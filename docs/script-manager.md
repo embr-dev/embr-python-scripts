@@ -106,11 +106,15 @@ python3 tools/gen_catalog.py
 # 明示: EMBR_CATALOG_REF=dev python3 tools/gen_catalog.py
 ```
 
-`catalog/catalog.json` をコミットする。チャンネルごとの URL 例:
+`catalog/catalog.json` をコミットする。Script Manager は GitHub API で tip commit を解決し、**Contents API** でカタログを読む（`raw.githubusercontent.com` のブランチ CDN 遅延を避ける）。パッケージ本体の raw 取得もその SHA にピンする。
 
-- dev: `https://raw.githubusercontent.com/embr-dev/embr-python-scripts/dev/catalog/catalog.json`
-- latest (`main`): `https://raw.githubusercontent.com/embr-dev/embr-python-scripts/main/catalog/catalog.json`
-- stable: `https://raw.githubusercontent.com/embr-dev/embr-python-scripts/stable/catalog/catalog.json`
+チャンネル → git ref:
+
+| Channel | Ref |
+|---------|-----|
+| `dev` | `dev` |
+| `latest` | `main` |
+| `stable` | `stable` |
 
 ---
 

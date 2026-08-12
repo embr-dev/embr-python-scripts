@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import json
-import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 from typing import Any
+from urllib.parse import quote
 
 DEFAULT_REPO = "embr-dev/embr-python-scripts"
 DEFAULT_REF = "main"
@@ -80,17 +80,25 @@ class Catalog:
 
 
 def catalog_url(repo: str = DEFAULT_REPO, ref: str = DEFAULT_REF) -> str:
-    # Query busts raw.githubusercontent.com CDN (often ~5 min); branch tip moves fast on dev.
-    return (
-        f"https://raw.githubusercontent.com/{repo}/{ref}/catalog/catalog.json"
-        f"?t={int(time.time())}"
-    )
+    # Prefer a commit SHA for ``ref`` — branch names are CDN-cached (~5 min) on
+    # raw.githubusercontent.com and query strings do not reliably bust that cache.
+    return f"https://raw.githubusercontent.com/{repo}/{ref}/catalog/catalog.json"
 
 
 def raw_file_url(repo: str, ref: str, repo_path: str) -> str:
+    return f"https://raw.githubusercontent.com/{repo}/{ref}/{repo_path}"
+
+
+def commits_api_url(repo: str, ref: str) -> str:
+    """GitHub API URL that resolves a branch/tag/ref to a commit."""
+    return f"https://api.github.com/repos/{repo}/commits/{quote(ref, safe='')}"
+
+
+def contents_api_url(repo: str, path: str, ref: str) -> str:
+    """GitHub Contents API URL for a file at ``ref`` (branch, tag, or SHA)."""
     return (
-        f"https://raw.githubusercontent.com/{repo}/{ref}/{repo_path}"
-        f"?t={int(time.time())}"
+        f"https://api.github.com/repos/{repo}/contents/{quote(path, safe='/')}"
+        f"?ref={quote(ref, safe='')}"
     )
 
 
@@ -150,6 +158,7 @@ def fetch_bytes(url: str, *, timeout: float = 30.0) -> bytes:
         url,
         headers={
             "User-Agent": USER_AGENT,
+            "Accept": "application/vnd.github+json",
             "Cache-Control": "no-cache",
             "Pragma": "no-cache",
         },
@@ -174,21 +183,86 @@ def fetch_bytes(url: str, *, timeout: float = 30.0) -> bytes:
         ) from exc
 
 
+def resolve_ref_sha(
+    repo: str,
+    ref: str,
+    *,
+    timeout: float = 30.0,
+) -> str:
+    """Resolve a branch/tag/ref to a full commit SHA via the GitHub API.
+
+    Raw URLs keyed by branch name are CDN-cached; pinning to a SHA avoids
+    stale catalog.json / package files after a push to ``dev``.
+    """
+    # Already a full SHA — skip the API round-trip.
+    if len(ref) == 40 and all(c in "0123456789abcdef" for c in ref.lower()):
+        return ref.lower()
+
+    url = commits_api_url(repo, ref)
+    raw = fetch_bytes(url, timeout=timeout)
+    try:
+        data = json.loads(raw.decode("utf-8"))
+    except json.JSONDecodeError as exc:
+        raise CatalogError(
+            f"Embr Script Manager: invalid GitHub commits JSON from {url} - {exc}"
+        ) from exc
+    sha = str(data.get("sha") or "").strip().lower()
+    if len(sha) != 40 or any(c not in "0123456789abcdef" for c in sha):
+        raise CatalogError(
+            f"Embr Script Manager: could not resolve ref '{ref}' on {repo} to a "
+            "commit SHA. Check the channel / branch name."
+        )
+    return sha
+
+
 def fetch_catalog(
     repo: str = DEFAULT_REPO,
     ref: str = DEFAULT_REF,
     *,
     timeout: float = 30.0,
 ) -> Catalog:
-    url = catalog_url(repo, ref)
+    """Fetch and parse catalog.json, pinned to the resolved commit SHA.
+
+    Uses the GitHub Contents API (not branch-named raw URLs) so Refresh is not
+    blocked by raw.githubusercontent.com CDN lag after a push.
+    """
+    import base64
+
+    sha = resolve_ref_sha(repo, ref, timeout=timeout)
+    url = contents_api_url(repo, "catalog/catalog.json", sha)
     raw = fetch_bytes(url, timeout=timeout)
     try:
-        data = json.loads(raw.decode("utf-8"))
+        meta = json.loads(raw.decode("utf-8"))
+    except json.JSONDecodeError as exc:
+        raise CatalogError(
+            f"Embr Script Manager: invalid GitHub contents JSON from {url} - {exc}"
+        ) from exc
+
+    encoding = str(meta.get("encoding") or "")
+    if encoding == "base64" and meta.get("content"):
+        try:
+            text = base64.b64decode(meta["content"]).decode("utf-8")
+        except (ValueError, UnicodeDecodeError) as exc:
+            raise CatalogError(
+                f"Embr Script Manager: cannot decode catalog from {url} - {exc}"
+            ) from exc
+    elif meta.get("download_url"):
+        text = fetch_bytes(str(meta["download_url"]), timeout=timeout).decode("utf-8")
+    else:
+        raise CatalogError(
+            f"Embr Script Manager: catalog contents response missing file data ({url})."
+        )
+
+    try:
+        data = json.loads(text)
     except json.JSONDecodeError as exc:
         raise CatalogError(
             f"Embr Script Manager: invalid catalog JSON from {url} - {exc}"
         ) from exc
-    return parse_catalog(data)
+    catalog = parse_catalog(data)
+    # Pin package downloads to the same commit that produced this catalog.
+    catalog.ref = sha
+    return catalog
 
 
 def fetch_catalog_for_channel(

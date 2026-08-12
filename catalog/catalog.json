@@ -89,15 +89,15 @@
     {
       "id": "embr_manager",
       "name": "Script Manager",
-      "version": "0.1.8",
+      "version": "0.1.9",
       "kind": "tool",
       "path": "scripts/embr_manager",
       "min_flame": "2025.0",
-      "digest": "06b324a78a25b0db3900b5ab7174af13591a51d74be7d18e8279c43ed2039779",
+      "digest": "2baa62e085f24dc83f508dc6b08b13728a6864fa8ac8fb59b540e8b6cf829b9f",
       "files": [
         {
           "path": "embr_manager.py",
-          "sha256": "61cc7f51d531544df23f241d7efa1bf29db6bf1768dff878b3f1281a8293da8e"
+          "sha256": "7ea436f63dfea1ec8b1d0383e9d9e31f1e416cba33b9d7ee77e1c60c574dca1d"
         },
         {
           "path": "embr_sm_actions.py",
@@ -109,7 +109,7 @@
         },
         {
           "path": "embr_sm_catalog.py",
-          "sha256": "0993517a6fca38dfc27696044d1d449bedf548f0e1bc49a764f7f05fe6b6380f"
+          "sha256": "ae8571b9e442436e67b04b7cfcd2526873e25cf8de0f308a2df1cf68da036926"
         },
         {
           "path": "embr_sm_local.py",
