@@ -656,6 +656,11 @@ def stylesheet(*, combo_arrow_url: str | None = None) -> str:
     QWidget#embrReplaceHost {{
         background-color: {EMBR_SURFACE};
     }}
+    QLabel#embrReplaceArrow {{
+        background: transparent;
+        border: none;
+        padding: 0px;
+    }}
     """
 
 
