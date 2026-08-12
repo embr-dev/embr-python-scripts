@@ -17,9 +17,30 @@
         "locked": true
       }
     ],
-    "timeline": [],
-    "media_panel": [],
-    "batch": [],
+    "timeline": [
+      {
+        "id": "rename",
+        "caption": "Rename",
+        "order": 100,
+        "visible": true
+      }
+    ],
+    "media_panel": [
+      {
+        "id": "rename",
+        "caption": "Rename",
+        "order": 100,
+        "visible": true
+      }
+    ],
+    "batch": [
+      {
+        "id": "rename",
+        "caption": "Rename",
+        "order": 100,
+        "visible": true
+      }
+    ],
     "action": [],
     "mediahub_files": [],
     "mediahub_projects": [],

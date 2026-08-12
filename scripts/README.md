@@ -7,6 +7,7 @@ Flame が読む Python hooks を置く。開発時は `DL_PYTHON_HOOK_PATH` で�
 | `embr/` | 共通ユーティリティ（フック関数なし）+ `assets/` + `menus/defaults.json` |
 | `embr_manager/` | Script Manager（Install / Update / Uninstall / Repair） |
 | `embr_preferences/` | Preferences（メニュー並び・表示/非表示） |
+| `embr_rename/` | Rename（トークン / 置換プレビュー） |
 | `embr_<tool>/` | その他ツール本体（フック入口はここ） |
 
 規約: [docs/conventions.md](../docs/conventions.md)  

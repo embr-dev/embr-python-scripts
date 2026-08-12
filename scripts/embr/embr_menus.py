@@ -106,7 +106,10 @@ def _defaults_or_empty() -> dict[str, Any]:
 
 
 def load_prefs(config_root: Path | None = None) -> dict[str, Any]:
-    """Load user prefs; missing or invalid file yields empty menus prefs."""
+    """Load user prefs; missing or invalid file yields empty menus prefs.
+
+    Extra top-level keys (e.g. ``rename``) are preserved when present.
+    """
     path = prefs_path(config_root)
     if not path.is_file():
         return _empty_prefs()
@@ -118,8 +121,15 @@ def load_prefs(config_root: Path | None = None) -> dict[str, Any]:
         return _empty_prefs()
     menus = data.get("menus")
     if not isinstance(menus, dict):
-        return _empty_prefs()
-    return {"schema": int(data.get("schema") or PREFS_SCHEMA), "menus": menus}
+        menus = {}
+    result: dict[str, Any] = {
+        "schema": int(data.get("schema") or PREFS_SCHEMA),
+        "menus": menus,
+    }
+    rename = data.get("rename")
+    if isinstance(rename, dict):
+        result["rename"] = rename
+    return result
 
 
 def save_prefs(prefs: dict[str, Any], config_root: Path | None = None) -> Path:
@@ -127,10 +137,26 @@ def save_prefs(prefs: dict[str, Any], config_root: Path | None = None) -> Path:
     path = prefs_path(config_root)
     try:
         paths.ensure_writable(path.parent)
-        payload = {
-            "schema": int(prefs.get("schema") or PREFS_SCHEMA),
-            "menus": prefs.get("menus") if isinstance(prefs.get("menus"), dict) else {},
-        }
+        # Merge with on-disk file so unrelated sections survive partial writers.
+        existing: dict[str, Any] = {}
+        if path.is_file():
+            try:
+                raw = json.loads(path.read_text(encoding="utf-8"))
+                if isinstance(raw, dict):
+                    existing = raw
+            except (OSError, json.JSONDecodeError):
+                existing = {}
+        payload = dict(existing)
+        payload["schema"] = int(prefs.get("schema") or existing.get("schema") or PREFS_SCHEMA)
+        if "menus" in prefs:
+            payload["menus"] = (
+                prefs["menus"] if isinstance(prefs.get("menus"), dict) else {}
+            )
+        if "rename" in prefs:
+            if isinstance(prefs.get("rename"), dict):
+                payload["rename"] = prefs["rename"]
+            elif prefs.get("rename") is None:
+                payload.pop("rename", None)
         path.write_text(
             json.dumps(payload, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
@@ -146,8 +172,10 @@ def save_prefs(prefs: dict[str, Any], config_root: Path | None = None) -> Path:
 
 
 def reset_menu_prefs(config_root: Path | None = None) -> Path:
-    """Clear all menu overrides (keep prefs file with empty menus)."""
-    return save_prefs(_empty_prefs(), config_root=config_root)
+    """Clear menu overrides only (preserve other prefs sections such as rename)."""
+    prefs = load_prefs(config_root)
+    prefs["menus"] = {}
+    return save_prefs(prefs, config_root=config_root)
 
 
 def set_surface_prefs(

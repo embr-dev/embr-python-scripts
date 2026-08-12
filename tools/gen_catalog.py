@@ -115,6 +115,8 @@ def build_package(pkg_dir: Path) -> dict:
             entry["name"] = "Script Manager"
         elif pkg_id == "embr_preferences":
             entry["name"] = "Preferences"
+        elif pkg_id == "embr_rename":
+            entry["name"] = "Rename"
     return entry
 
 

@@ -199,6 +199,18 @@ def get_media_panel_custom_ui_actions():
     ]
 ```
 
+### selection のタイミング（Embr Rename 方針）
+
+`isVisible` / `isEnabled` / `execute` はいずれも `selection` を受け取るが、**クリック時の `execute` 引数は右クリック時と異なる／空になることがある**（フォーカス移動や PySide ダイアログなど）。
+
+Embr Rename は次で固定する:
+
+1. `isVisible(selection)` で面ごとに `tuple(selection)` をキャッシュする
+2. `execute` の引数は使わず、キャッシュだけを Rename 対象にする
+3. ダイアログ表示後にライブ選択を取り直さない
+
+---
+
 ### 階層メニュー（2023.2+）
 
 `hierarchy` / `order` / `separator` を使う。公式例: `python_utilities/examples/custom_menu_structure.py`。  

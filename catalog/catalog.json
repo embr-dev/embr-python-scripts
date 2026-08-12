@@ -6,15 +6,15 @@
     {
       "id": "embr",
       "name": "Embr Core",
-      "version": "0.2.5",
+      "version": "0.2.6",
       "kind": "library",
       "path": "scripts/embr",
       "min_flame": "2025.0",
-      "digest": "5f5ceaa2b6fb453b02a8819fab624b9d758b91be8cd1664feca9a58ecc28f8af",
+      "digest": "9c0ba52d69b1a0640c351b76f791c48738ff5cff8a630919fdc619205e3e925e",
       "files": [
         {
           "path": "__init__.py",
-          "sha256": "88baa63c34c5e36ac021f5e8b6e1747546e08f84d62ae71775fdf7103f3b671a"
+          "sha256": "a7c65eb77706a3dc515ab7247a27d058229e9329ebad49c56fda74e1e5a0a078"
         },
         {
           "path": "assets/fonts/Figtree/Figtree-Bold.ttf",
@@ -62,7 +62,7 @@
         },
         {
           "path": "embr_menus.py",
-          "sha256": "06ac8ee6468e7f1e8a406b5bcbf212ed25c52fd0bb79f69545522bb911bfaa0e"
+          "sha256": "710c44e00d3903e8350be0c591989f8ab1196f9b12a2fa1882c233a484632498"
         },
         {
           "path": "embr_names.py",
@@ -82,7 +82,7 @@
         },
         {
           "path": "menus/defaults.json",
-          "sha256": "c69c2ed21596b1c69f94957adfd8f67090fdd560275a7fad1e4457d48f5d0b48"
+          "sha256": "c4f26c19b640192637b1c05cebbeb1695d8d7b58e127e05298be23e9c4df9f31"
         }
       ]
     },
@@ -140,6 +140,40 @@
         {
           "path": "embr_preferences.py",
           "sha256": "072164fc2d2cb3b3a1655c47edd137ebb8f5d3b6574789ab5d7e9f3da0133099"
+        }
+      ],
+      "depends": [
+        "embr"
+      ]
+    },
+    {
+      "id": "embr_rename",
+      "name": "Rename",
+      "version": "0.1.0",
+      "kind": "tool",
+      "path": "scripts/embr_rename",
+      "min_flame": "2025.0",
+      "digest": "26ea38bc0592358d3cb75da48028f78aefc4b94228947c841887b216ec2f20d6",
+      "files": [
+        {
+          "path": "embr_rename.py",
+          "sha256": "782fd7e613cdf278cf8ded345e0be4ca175c1c0c128446dfa431a21e049d4024"
+        },
+        {
+          "path": "embr_rn_prefs.py",
+          "sha256": "0935933f9d7b3e6ef5dcd8f93ddc5bfb1339b4bc3b8724907e7f1562e867ded8"
+        },
+        {
+          "path": "embr_rn_selection.py",
+          "sha256": "94ab2bf113b545cad35e840621f9c260cd8ea8c4f5f967a301244fa1c5dfbe42"
+        },
+        {
+          "path": "embr_rn_tokens.py",
+          "sha256": "52575a74227f9cd79e3bd23228e7771da650fff86b3651d5a58923f3083eadfa"
+        },
+        {
+          "path": "embr_rn_window.py",
+          "sha256": "b47abbc7b611930584810fea980a1b5c0575ac14db0859ad9e0f479a60145522"
         }
       ],
       "depends": [
