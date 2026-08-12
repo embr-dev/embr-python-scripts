@@ -26,6 +26,7 @@ EMBR_MUTED = "#9B9DA1"
 # Frameless window chrome
 EMBR_WINDOW_RADIUS = 6
 EMBR_TITLE_ICON_SIZE = 24
+EMBR_TITLE_CTRL_ICON_SIZE = 16
 EMBR_TITLE_BRAND_PT = 17
 EMBR_TITLE_BRAND_GAP = 4
 
@@ -46,6 +47,7 @@ ICON_MINIMIZE = "\ue931"  # minimize
 ICON_MAXIMIZE = "\ue3c6"  # crop_square
 ICON_RESTORE = "\ue3e0"  # filter_none
 ICON_CLOSE = "\ue5cd"  # close
+ICON_EXPAND_MORE = "\ue5cf"  # expand_more (dropdown chevron)
 
 _ICON_TOOLTIPS = {
     ICON_MINIMIZE: "Minimize",
@@ -229,6 +231,28 @@ def material_icon_pixmap(
     return pix
 
 
+def material_icon_png_path(
+    codepoint: str,
+    pixel_size: int = 16,
+    *,
+    color: str = EMBR_TEXT,
+) -> Path:
+    """Write a cached PNG for QSS ``image: url(...)`` (e.g. combo arrow)."""
+    import tempfile
+
+    digest = f"{ord(codepoint):04x}_{pixel_size}_{color.lstrip('#')}".lower()
+    cache_dir = Path(tempfile.gettempdir()) / "embr_ui_icons"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    out = cache_dir / f"{digest}.png"
+    if out.is_file():
+        return out
+    pix = material_icon_pixmap(codepoint, pixel_size, color=color)
+    if pix.isNull():
+        return out
+    pix.save(str(out), "PNG")
+    return out
+
+
 def logo_pixmap(name: str = "embr-mark.svg", width: int = 120) -> Any:
     """Load a logo as ``QPixmap`` (SVG via ``QSvgRenderer`` when needed)."""
     from PySide6.QtCore import QSize, Qt
@@ -261,9 +285,32 @@ def logo_pixmap(name: str = "embr-mark.svg", width: int = 120) -> Any:
     return pix.scaledToWidth(width, Qt.TransformationMode.SmoothTransformation)
 
 
-def stylesheet() -> str:
+def stylesheet(*, combo_arrow_url: str | None = None) -> str:
     """Return QSS using neutral chrome + Ember accents + Figtree."""
     family = _ensure_figtree_loaded()
+    arrow = combo_arrow_url or ""
+    arrow_rule = (
+        f"""
+    QComboBox::down-arrow {{
+        image: url("{arrow}");
+        width: 16px;
+        height: 16px;
+    }}
+    QComboBox::drop-down {{
+        border: none;
+        width: 26px;
+        subcontrol-origin: padding;
+        subcontrol-position: center right;
+    }}
+    """
+        if arrow
+        else """
+    QComboBox::drop-down {
+        border: none;
+        width: 20px;
+    }
+    """
+    )
     return f"""
     QWidget {{
         background-color: {EMBR_BG};
@@ -319,17 +366,14 @@ def stylesheet() -> str:
         background-color: {EMBR_SURFACE_RAISED};
         color: {EMBR_TEXT};
         border: 1px solid {EMBR_BORDER};
-        padding: 4px 8px;
+        padding: 4px 28px 4px 8px;
         border-radius: 4px;
         min-width: 96px;
     }}
     QComboBox:hover {{
         background-color: #3C3E43;
     }}
-    QComboBox::drop-down {{
-        border: none;
-        width: 20px;
-    }}
+    {arrow_rule}
     QComboBox QAbstractItemView {{
         background-color: {EMBR_SURFACE};
         color: {EMBR_TEXT};
@@ -371,6 +415,11 @@ def stylesheet() -> str:
         selection-color: {EMBR_TEXT};
         border: 1px solid {EMBR_BORDER};
         outline: none;
+    }}
+    QTableWidget:disabled {{
+        background-color: #1A1B1D;
+        color: #6E7074;
+        border-color: #3A3C40;
     }}
     QHeaderView::section {{
         background-color: {EMBR_SURFACE_RAISED};
@@ -444,7 +493,10 @@ def apply_no_focus_rect(widget: Any) -> None:
 def apply_embr_theme(widget: Any) -> None:
     """Apply Embr colors and Figtree to a Qt widget (typically a window)."""
     _ensure_material_icons_loaded()
-    widget.setStyleSheet(stylesheet())
+    arrow = material_icon_png_path(ICON_EXPAND_MORE, 16, color=EMBR_MUTED)
+    # QSS url() wants forward slashes on all platforms.
+    arrow_url = arrow.resolve().as_posix()
+    widget.setStyleSheet(stylesheet(combo_arrow_url=arrow_url))
     widget.setFont(embr_font(12))
     apply_no_focus_rect(widget)
 
@@ -491,7 +543,7 @@ def create_title_bar(window: Any, title: str) -> Any:
 
     icon_px = EMBR_TITLE_ICON_SIZE
     bar_h = max(36, icon_px + 12)
-    glyph_px = bar_h - 10
+    glyph_px = EMBR_TITLE_CTRL_ICON_SIZE
     bar = QWidget(window)
     bar.setObjectName("embrTitleBar")
     bar.setFixedHeight(bar_h)

@@ -6,8 +6,10 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QApplication,
     QComboBox,
     QDialog,
+    QGraphicsOpacityEffect,
     QHBoxLayout,
     QHeaderView,
     QLabel,
@@ -64,6 +66,7 @@ class ScriptManagerWindow(QDialog):
         self._source_root = source_root
         self._catalog: Catalog | None = None
         self._rows_by_id: dict[str, dict[str, str]] = {}
+        self._busy = False
         if channel is not None:
             self._channel = normalize_channel(channel)
         else:
@@ -136,7 +139,6 @@ class ScriptManagerWindow(QDialog):
             btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         buttons.addWidget(self._btn_refresh)
         buttons.addStretch(1)
-        # Right cluster, right-to-left visually: Uninstall · Repair · Install / Update
         buttons.addWidget(self._btn_uninstall)
         buttons.addWidget(self._btn_repair)
         buttons.addWidget(self._btn_install_update)
@@ -174,24 +176,89 @@ class ScriptManagerWindow(QDialog):
     def _selection_count(self) -> int:
         return len(self._table.selectionModel().selectedRows())
 
-    def _status_context(self) -> str:
-        packages = self._table.rowCount()
-        selected = self._selection_count()
-        src = (
-            f"local:{self._catalog_path.name}"
-            if self._catalog_path is not None
-            else f"channel:{self._channel}"
-        )
-        return f"{src} · {packages} package(s) · {selected} selected"
+    def _channel_phrase(self) -> str:
+        if self._catalog_path is not None:
+            return f"local catalog ({self._catalog_path.name})"
+        return f"channel “{self._channel}”"
+
+    def _idle_status(self) -> str:
+        """Friendly idle / selection status for the footer."""
+        total = self._table.rowCount()
+        selected = self._selected_rows()
+        n = len(selected)
+        base = f"{total} package{'s' if total != 1 else ''} on {self._channel_phrase()}"
+
+        if n == 0:
+            return f"Ready — {base}. Select a package to continue."
+
+        names = ", ".join(r["name"] for r in selected[:3])
+        if n > 3:
+            names += f", +{n - 3} more"
+
+        statuses = {r["status"] for r in selected}
+        if local.STATUS_NOT_INSTALLED in statuses and local.STATUS_UPDATE_AVAILABLE in statuses:
+            hint = "Install / Update is available."
+        elif local.STATUS_NOT_INSTALLED in statuses:
+            hint = "Ready to install."
+        elif local.STATUS_UPDATE_AVAILABLE in statuses:
+            hint = "Update available."
+        elif local.STATUS_CORRUPTED in statuses:
+            hint = "Repair recommended."
+        elif all(r["id"] in _PROTECTED_UNINSTALL for r in selected):
+            hint = "Core packages can’t be uninstalled here."
+        elif local.STATUS_UP_TO_DATE in statuses:
+            hint = "Up to date."
+        else:
+            hint = "Choose an action below."
+
+        return f"{n} selected ({names}) — {hint}"
 
     def _set_status(self, text: str) -> None:
         """Set status text without letting long messages widen the window."""
         self._status.setText(text)
         self._status.setMinimumWidth(0)
 
+    def _process_ui(self) -> None:
+        """Pump paints so busy status is visible — never during hidden construction."""
+        if not self.isVisible():
+            return
+        from PySide6.QtCore import QEventLoop
+
+        app = QApplication.instance()
+        if app is not None:
+            app.processEvents(QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)
+
+    def _set_busy(self, busy: bool, message: str | None = None) -> None:
+        """Dim the table and lock controls while a long action runs."""
+        self._busy = busy
+        self._table.setEnabled(not busy)
+        if self._catalog_path is None:
+            self._channel_combo.setEnabled(not busy)
+
+        if busy:
+            effect = QGraphicsOpacityEffect(self._table)
+            effect.setOpacity(0.45)
+            self._table.setGraphicsEffect(effect)
+            for btn in (
+                self._btn_refresh,
+                self._btn_install_update,
+                self._btn_repair,
+                self._btn_uninstall,
+            ):
+                btn.setEnabled(False)
+            if message:
+                self._set_status(message)
+        else:
+            self._table.setGraphicsEffect(None)
+            self._update_action_buttons()
+
+        self._process_ui()
+
     def _on_selection_changed(self) -> None:
+        if self._busy:
+            return
         self._update_action_buttons()
-        self._set_status(self._status_context())
+        self._set_status(self._idle_status())
 
     def _alert(self, text: str, *, critical: bool = True) -> None:
         """Show a modal alert without resizing this frameless window."""
@@ -241,6 +308,8 @@ class ScriptManagerWindow(QDialog):
         return rows
 
     def _update_action_buttons(self) -> None:
+        if self._busy:
+            return
         selected = self._selected_rows()
         can_install_update = any(
             r["status"]
@@ -265,20 +334,22 @@ class ScriptManagerWindow(QDialog):
             self._btn_uninstall.setToolTip("")
 
     def refresh(self) -> None:
-        self._set_status("Refreshing…")
+        self._set_busy(True, f"Checking {self._channel_phrase()}…")
         try:
             self._catalog = self._load_catalog()
             rows = actions.build_status_rows(self._catalog, self._root)
         except CatalogError as exc:
+            self._set_busy(False)
             self._alert(str(exc))
-            self._set_status(f"Refresh failed · {self._status_context()}")
-            self._update_action_buttons()
+            self._set_status(
+                f"Couldn’t load {self._channel_phrase()}. Try another channel or Refresh."
+            )
             return
         except Exception as exc:
+            self._set_busy(False)
             msg = f"Embr Script Manager: refresh failed - {exc}"
             self._alert(msg)
-            self._set_status(f"Refresh failed · {self._status_context()}")
-            self._update_action_buttons()
+            self._set_status("Refresh failed. Check the network and try again.")
             return
 
         self._rows_by_id = {row["id"]: row for row in rows}
@@ -293,12 +364,15 @@ class ScriptManagerWindow(QDialog):
                 if c == _COL_NAME:
                     item.setData(Qt.ItemDataRole.UserRole, row["id"])
                 self._table.setItem(r, c, item)
-        # Keep fixed Status/Local/Remote; Name stays Stretch (do not resizeToContents).
         self._table.setColumnWidth(_COL_STATUS, _COL_STATUS_W)
         self._table.setColumnWidth(_COL_LOCAL, _COL_VERSION_W)
         self._table.setColumnWidth(_COL_REMOTE, _COL_VERSION_W)
-        ref = self._catalog.ref if self._catalog is not None else "?"
-        self._set_status(f"Refreshed · {self._status_context()} · @{ref}")
+        self._set_busy(False)
+        total = len(rows)
+        self._set_status(
+            f"Catalog updated — {total} package{'s' if total != 1 else ''} "
+            f"on {self._channel_phrase()}."
+        )
         self._update_action_buttons()
         self.raise_()
         self.activateWindow()
@@ -314,10 +388,30 @@ class ScriptManagerWindow(QDialog):
         selected = self._selected_rows()
         if not selected:
             return
+
+        work = [
+            r
+            for r in selected
+            if r["status"]
+            in (local.STATUS_NOT_INSTALLED, local.STATUS_UPDATE_AVAILABLE)
+        ]
+        if not work:
+            return
+
         try:
-            for row in selected:
+            total = len(work)
+            for i, row in enumerate(work, start=1):
                 pkg_id = row["id"]
                 status = row["status"]
+                verb = (
+                    "Installing"
+                    if status == local.STATUS_NOT_INSTALLED
+                    else "Updating"
+                )
+                self._set_busy(
+                    True,
+                    f"{verb} {row['name']} ({i}/{total})…",
+                )
                 if status == local.STATUS_NOT_INSTALLED:
                     actions.install_package(
                         self._catalog,
@@ -325,7 +419,7 @@ class ScriptManagerWindow(QDialog):
                         self._root,
                         source_root=self._source_root,
                     )
-                elif status == local.STATUS_UPDATE_AVAILABLE:
+                else:
                     actions.update_package(
                         self._catalog,
                         pkg_id,
@@ -333,15 +427,17 @@ class ScriptManagerWindow(QDialog):
                         source_root=self._source_root,
                     )
         except (actions.ActionError, CatalogError) as exc:
+            self._set_busy(False)
             self._alert(str(exc))
-            self._set_status(str(exc))
+            self._set_status("Install / Update stopped. See the message for details.")
             return
         except Exception as exc:
+            self._set_busy(False)
             msg = f"Embr Script Manager: install/update failed - {exc}"
             self._alert(msg)
-            self._set_status(msg)
+            self._set_status("Install / Update failed. Try Repair or Refresh.")
             return
-        self._after_action("install/update")
+        self._after_action("Install / Update")
 
     def _run_action(self, action: str) -> None:
         if self._catalog is None:
@@ -363,9 +459,7 @@ class ScriptManagerWindow(QDialog):
             geo = self.geometry()
             msg = f"Uninstall {', '.join(removable)} from:\n{self._root} ?"
             if blocked:
-                msg += (
-                    f"\n\nSkipped (protected): {', '.join(blocked)}"
-                )
+                msg += f"\n\nSkipped (protected): {', '.join(blocked)}"
             answer = QMessageBox.question(
                 None,
                 "Embr Script Manager",
@@ -377,8 +471,15 @@ class ScriptManagerWindow(QDialog):
                 return
             ids = removable
 
+        label = "Repair" if action == "repair" else "Uninstall"
         try:
-            for pkg_id in ids:
+            total = len(ids)
+            for i, pkg_id in enumerate(ids, start=1):
+                name = (
+                    self._rows_by_id.get(pkg_id, {}).get("name")
+                    or pkg_id
+                )
+                self._set_busy(True, f"{label}ing {name} ({i}/{total})…")
                 if action == "repair":
                     actions.repair_package(
                         self._catalog,
@@ -389,28 +490,31 @@ class ScriptManagerWindow(QDialog):
                 elif action == "uninstall":
                     actions.uninstall_package(self._catalog, pkg_id, self._root)
         except (actions.ActionError, CatalogError) as exc:
+            self._set_busy(False)
             self._alert(str(exc))
-            self._set_status(str(exc))
+            self._set_status(f"{label} stopped. See the message for details.")
             return
         except Exception as exc:
+            self._set_busy(False)
             msg = f"Embr Script Manager: {action} failed - {exc}"
             self._alert(msg)
-            self._set_status(msg)
+            self._set_status(f"{label} failed. Try Refresh and try again.")
             return
 
-        self._after_action(action)
+        self._after_action(label)
 
     def _after_action(self, action: str) -> None:
+        self._set_busy(False)
         self.refresh()
-        self._set_status(f"{action} completed · {self._status_context()}")
+        done = f"{action} finished."
         try:
             import embr_hooks as hooks
 
             hooks.refresh(invalidate=("embr", "embr_manager"))
+            self._set_status(f"{done} {self._idle_status()}")
         except Exception:
             self._set_status(
-                f"{action} completed · {self._status_context()} · "
-                "run Rescan Python Hooks if menus did not update"
+                f"{done} If menus look stale, run Rescan Python Hooks."
             )
         self.raise_()
         self.activateWindow()
@@ -418,8 +522,6 @@ class ScriptManagerWindow(QDialog):
 
 def open_script_manager() -> None:
     """Entry used by the Flame hook."""
-    from PySide6.QtWidgets import QApplication
-
     app = QApplication.instance()
     if app is None:
         app = QApplication([])
