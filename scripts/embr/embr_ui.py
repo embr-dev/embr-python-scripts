@@ -41,11 +41,18 @@ _MATERIAL_LOADED = False
 _MATERIAL_FAMILY = "Material Icons"
 _MATERIAL_LOAD_ERROR: str | None = None
 
-# Material Icons ligature names (MaterialIcons-Regular.ttf)
-ICON_MINIMIZE = "minimize"
-ICON_MAXIMIZE = "crop_square"
-ICON_RESTORE = "filter_none"
-ICON_CLOSE = "close"
+# Material Icons PUA codepoints (ligatures are unreliable in Qt widgets).
+ICON_MINIMIZE = "\ue931"  # minimize
+ICON_MAXIMIZE = "\ue3c6"  # crop_square
+ICON_RESTORE = "\ue3e0"  # filter_none
+ICON_CLOSE = "\ue5cd"  # close
+
+_ICON_TOOLTIPS = {
+    ICON_MINIMIZE: "Minimize",
+    ICON_MAXIMIZE: "Maximize",
+    ICON_RESTORE: "Restore",
+    ICON_CLOSE: "Close",
+}
 
 
 def assets_dir() -> Path:
@@ -154,18 +161,21 @@ def _ensure_material_icons_loaded() -> str:
 
 
 def material_font(point_size: int = 18) -> Any:
-    """Return a ``QFont`` for Material Icons ligatures."""
+    """Return a ``QFont`` for Material Icons codepoints."""
     from PySide6.QtGui import QFont
 
-    font = QFont(_ensure_material_icons_loaded(), point_size)
-    font.setStyleStrategy(QFont.StyleStrategy.PreferDefault)
+    font = QFont(_ensure_material_icons_loaded())
+    font.setPixelSize(point_size)
+    font.setStyleStrategy(
+        QFont.StyleStrategy.PreferQuality | QFont.StyleStrategy.NoFontMerging
+    )
     return font
 
 
-def material_icon_text(name: str) -> str:
-    """Return the ligature string for a Material Icon name (e.g. ``close``)."""
+def material_icon_text(codepoint: str) -> str:
+    """Return a Material Icons glyph string (PUA codepoint)."""
     _ensure_material_icons_loaded()
-    return name
+    return codepoint
 
 
 def logo_pixmap(name: str = "embr-mark.svg", width: int = 120) -> Any:
@@ -280,10 +290,12 @@ def stylesheet() -> str:
         background-color: transparent;
         color: {EMBR_TEXT};
         border: none;
-        padding: 0;
-        min-width: 40px;
-        max-width: 40px;
+        padding: 0px;
+        margin: 0px;
+        min-width: 36px;
+        max-width: 36px;
         min-height: 36px;
+        max-height: 36px;
         border-radius: 0;
     }}
     QPushButton#embrWinBtn:hover {{
@@ -427,16 +439,18 @@ def create_title_bar(window: Any, title: str) -> Any:
     from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSizePolicy, QWidget
 
     icon_px = EMBR_TITLE_ICON_SIZE
+    bar_h = max(36, icon_px + 12)
+    glyph_px = bar_h - 10
     bar = QWidget(window)
     bar.setObjectName("embrTitleBar")
-    bar.setFixedHeight(max(36, icon_px + 12))
+    bar.setFixedHeight(bar_h)
     root = QHBoxLayout(bar)
     root.setContentsMargins(0, 0, 0, 0)
     root.setSpacing(0)
 
     left = QWidget(bar)
     left_l = QHBoxLayout(left)
-    left_l.setContentsMargins(10, 0, 8, 0)
+    left_l.setContentsMargins(8, 0, 8, 0)
     left_l.setSpacing(EMBR_TITLE_BRAND_GAP)
     icon = QLabel(left)
     pix = logo_pixmap("embr-icon.svg", width=icon_px)
@@ -461,13 +475,14 @@ def create_title_bar(window: Any, title: str) -> Any:
     right_l.setSpacing(0)
     right_l.addStretch(1)
 
-    def _win_btn(icon_name: str, object_name: str) -> QPushButton:
-        btn = QPushButton(material_icon_text(icon_name), right)
+    def _win_btn(glyph: str, object_name: str) -> QPushButton:
+        btn = QPushButton(material_icon_text(glyph), right)
         btn.setObjectName(object_name)
-        btn.setFont(material_font(18))
+        btn.setFont(material_font(glyph_px))
         btn.setCursor(Qt.CursorShape.ArrowCursor)
         btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        btn.setToolTip(icon_name.replace("_", " "))
+        btn.setFixedSize(bar_h, bar_h)
+        btn.setToolTip(_ICON_TOOLTIPS.get(glyph, ""))
         return btn
 
     btn_min = _win_btn(ICON_MINIMIZE, "embrWinBtn")
@@ -478,7 +493,7 @@ def create_title_bar(window: Any, title: str) -> Any:
     right_l.addWidget(btn_close)
 
     # Equal side columns keep the title optically centered.
-    side_w = 148
+    side_w = max(148, bar_h * 3)
     left.setFixedWidth(side_w)
     right.setFixedWidth(side_w)
     root.addWidget(left, 0)
@@ -495,9 +510,11 @@ def create_title_bar(window: Any, title: str) -> Any:
         if window.isMaximized():
             window.showNormal()
             btn_max.setText(material_icon_text(ICON_MAXIMIZE))
+            btn_max.setToolTip(_ICON_TOOLTIPS[ICON_MAXIMIZE])
         else:
             window.showMaximized()
             btn_max.setText(material_icon_text(ICON_RESTORE))
+            btn_max.setToolTip(_ICON_TOOLTIPS[ICON_RESTORE])
 
     def _close() -> None:
         window.close()
@@ -554,6 +571,7 @@ def prepare_embr_window(window: Any, title: str) -> Any:
         | Qt.WindowType.WindowSystemMenuHint
         | Qt.WindowType.WindowMinimizeButtonHint
         | Qt.WindowType.WindowMaximizeButtonHint
+        | Qt.WindowType.WindowStaysOnTopHint
     )
     apply_embr_theme(window)
     _apply_rounded_mask(window, EMBR_WINDOW_RADIUS)

@@ -44,6 +44,9 @@ _COL_REMOTE = 3
 _COL_STATUS_W = 140
 _COL_VERSION_W = 88
 
+# Core packages that must not be removed from the UI.
+_PROTECTED_UNINSTALL = frozenset({"embr", "embr_manager"})
+
 
 class ScriptManagerWindow(QDialog):
     def __init__(
@@ -133,9 +136,10 @@ class ScriptManagerWindow(QDialog):
             btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         buttons.addWidget(self._btn_refresh)
         buttons.addStretch(1)
-        buttons.addWidget(self._btn_install_update)
-        buttons.addWidget(self._btn_repair)
+        # Right cluster, right-to-left visually: Uninstall · Repair · Install / Update
         buttons.addWidget(self._btn_uninstall)
+        buttons.addWidget(self._btn_repair)
+        buttons.addWidget(self._btn_install_update)
         body.addLayout(buttons)
 
         layout.addLayout(body)
@@ -157,7 +161,7 @@ class ScriptManagerWindow(QDialog):
         self._btn_install_update.clicked.connect(self._run_install_or_update)
         self._btn_repair.clicked.connect(lambda: self._run_action("repair"))
         self._btn_uninstall.clicked.connect(lambda: self._run_action("uninstall"))
-        self._table.itemSelectionChanged.connect(self._update_action_buttons)
+        self._table.itemSelectionChanged.connect(self._on_selection_changed)
 
         font_err = embr_ui.font_load_error()
         if font_err:
@@ -167,11 +171,27 @@ class ScriptManagerWindow(QDialog):
         self._update_root_label()
         self.refresh()
 
+    def _selection_count(self) -> int:
+        return len(self._table.selectionModel().selectedRows())
+
+    def _status_context(self) -> str:
+        packages = self._table.rowCount()
+        selected = self._selection_count()
+        src = (
+            f"local:{self._catalog_path.name}"
+            if self._catalog_path is not None
+            else f"channel:{self._channel}"
+        )
+        return f"{src} · {packages} package(s) · {selected} selected"
+
     def _set_status(self, text: str) -> None:
         """Set status text without letting long messages widen the window."""
         self._status.setText(text)
-        # Re-assert ignored horizontal policy after text changes on some styles.
         self._status.setMinimumWidth(0)
+
+    def _on_selection_changed(self) -> None:
+        self._update_action_buttons()
+        self._set_status(self._status_context())
 
     def _alert(self, text: str, *, critical: bool = True) -> None:
         """Show a modal alert without resizing this frameless window."""
@@ -229,26 +249,35 @@ class ScriptManagerWindow(QDialog):
         )
         can_repair = any(r["status"] == local.STATUS_CORRUPTED for r in selected)
         can_uninstall = any(
-            r["status"] != local.STATUS_NOT_INSTALLED for r in selected
+            r["status"] != local.STATUS_NOT_INSTALLED
+            and r["id"] not in _PROTECTED_UNINSTALL
+            for r in selected
         )
         self._btn_refresh.setEnabled(True)
         self._btn_install_update.setEnabled(can_install_update)
         self._btn_repair.setEnabled(can_repair)
         self._btn_uninstall.setEnabled(can_uninstall)
+        if selected and all(r["id"] in _PROTECTED_UNINSTALL for r in selected):
+            self._btn_uninstall.setToolTip(
+                "Embr Core and Script Manager cannot be uninstalled from the UI."
+            )
+        else:
+            self._btn_uninstall.setToolTip("")
 
     def refresh(self) -> None:
+        self._set_status("Refreshing…")
         try:
             self._catalog = self._load_catalog()
             rows = actions.build_status_rows(self._catalog, self._root)
         except CatalogError as exc:
             self._alert(str(exc))
-            self._set_status(str(exc))
+            self._set_status(f"Refresh failed · {self._status_context()}")
             self._update_action_buttons()
             return
         except Exception as exc:
             msg = f"Embr Script Manager: refresh failed - {exc}"
             self._alert(msg)
-            self._set_status(msg)
+            self._set_status(f"Refresh failed · {self._status_context()}")
             self._update_action_buttons()
             return
 
@@ -268,16 +297,11 @@ class ScriptManagerWindow(QDialog):
         self._table.setColumnWidth(_COL_STATUS, _COL_STATUS_W)
         self._table.setColumnWidth(_COL_LOCAL, _COL_VERSION_W)
         self._table.setColumnWidth(_COL_REMOTE, _COL_VERSION_W)
-        src = (
-            f"local:{self._catalog_path.name}"
-            if self._catalog_path is not None
-            else f"channel:{self._channel}"
-        )
-        self._set_status(
-            f"{src} · {self._catalog.repo}@{self._catalog.ref} — "
-            f"{len(rows)} package(s)"
-        )
+        ref = self._catalog.ref if self._catalog is not None else "?"
+        self._set_status(f"Refreshed · {self._status_context()} · @{ref}")
         self._update_action_buttons()
+        self.raise_()
+        self.activateWindow()
 
     def _selected_ids(self) -> list[str]:
         return [r["id"] for r in self._selected_rows()]
@@ -329,16 +353,29 @@ class ScriptManagerWindow(QDialog):
             return
 
         if action == "uninstall":
+            removable = [i for i in ids if i not in _PROTECTED_UNINSTALL]
+            blocked = [i for i in ids if i in _PROTECTED_UNINSTALL]
+            if not removable:
+                self._alert(
+                    "Embr Core and Script Manager cannot be uninstalled from the UI."
+                )
+                return
             geo = self.geometry()
+            msg = f"Uninstall {', '.join(removable)} from:\n{self._root} ?"
+            if blocked:
+                msg += (
+                    f"\n\nSkipped (protected): {', '.join(blocked)}"
+                )
             answer = QMessageBox.question(
                 None,
                 "Embr Script Manager",
-                f"Uninstall {', '.join(ids)} from:\n{self._root} ?",
+                msg,
             )
             if not self.isMaximized():
                 self.setGeometry(geo)
             if answer != QMessageBox.StandardButton.Yes:
                 return
+            ids = removable
 
         try:
             for pkg_id in ids:
@@ -365,15 +402,18 @@ class ScriptManagerWindow(QDialog):
 
     def _after_action(self, action: str) -> None:
         self.refresh()
-        self._set_status(f"{action} completed")
+        self._set_status(f"{action} completed · {self._status_context()}")
         try:
             import embr_hooks as hooks
 
             hooks.refresh(invalidate=("embr", "embr_manager"))
         except Exception:
             self._set_status(
-                f"{action} completed — run Rescan Python Hooks if menus did not update"
+                f"{action} completed · {self._status_context()} · "
+                "run Rescan Python Hooks if menus did not update"
             )
+        self.raise_()
+        self.activateWindow()
 
 
 def open_script_manager() -> None:

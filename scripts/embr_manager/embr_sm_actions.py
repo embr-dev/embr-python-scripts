@@ -181,11 +181,20 @@ def repair_package(
     install_package(catalog, package_id, root, force=True, source_root=source_root)
 
 
+PROTECTED_FROM_UNINSTALL = frozenset({"embr", "embr_manager"})
+
+
 def uninstall_package(
     catalog: Catalog | None,
     package_id: str,
     root: Path,
 ) -> None:
+    if package_id in PROTECTED_FROM_UNINSTALL:
+        raise ActionError(
+            f"Embr Script Manager: cannot uninstall '{package_id}' - "
+            "core packages (Embr Core / Script Manager) are protected. "
+            "Remove them manually from the install root if you really need to."
+        )
     state = local_mod.load_state(root)
     if catalog is not None:
         deps = _dependents(catalog, package_id, state)

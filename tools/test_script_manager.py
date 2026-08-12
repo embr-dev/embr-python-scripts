@@ -52,8 +52,20 @@ def main() -> None:
         rows = {r["id"]: r["status"] for r in actions.build_status_rows(cat, td_path)}
         assert rows["embr"] == local.STATUS_UP_TO_DATE
 
-        actions.uninstall_package(cat, "embr_manager", td_path)
-        actions.uninstall_package(cat, "embr", td_path)
+        try:
+            actions.uninstall_package(cat, "embr", td_path)
+            raise AssertionError("expected protected uninstall to fail")
+        except actions.ActionError:
+            pass
+        try:
+            actions.uninstall_package(cat, "embr_manager", td_path)
+            raise AssertionError("expected protected uninstall to fail")
+        except actions.ActionError:
+            pass
+        import shutil
+
+        shutil.rmtree(td_path / "embr_manager")
+        shutil.rmtree(td_path / "embr")
         assert not (td_path / "embr").exists()
 
     with tempfile.TemporaryDirectory() as td:

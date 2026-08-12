@@ -6,15 +6,15 @@
     {
       "id": "embr",
       "name": "Embr Core",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "kind": "library",
       "path": "scripts/embr",
       "min_flame": "2025.0",
-      "digest": "bd378c85e3583a2f08033c2690a9ffcec206e4c543b48884c3db2d34b4d82e81",
+      "digest": "d09c1dbd2fe99087db690ba7348830e9113bbbfd54f2ca82ca1c8c9ee24b5b13",
       "files": [
         {
           "path": "__init__.py",
-          "sha256": "321f84d414ca7516de80b53518aff94b39bf8480c462a777057d695ce175c9c5"
+          "sha256": "4bc6b1b8983b6dd5f7de7b7fa15e31fa5b6dc63bd175bfa02954c273806e73e1"
         },
         {
           "path": "assets/fonts/Figtree/Figtree-Bold.ttf",
@@ -70,7 +70,7 @@
         },
         {
           "path": "embr_ui.py",
-          "sha256": "4cdc095ace0f7f13c96ea1cc137376a3754932fddd970105cded9f275249eb54"
+          "sha256": "7311e67ed1c6fe86d1f6409f30c049aa94aac7f7d9c2002ecdfb770d005226b7"
         },
         {
           "path": "embr_version.py",
@@ -81,19 +81,19 @@
     {
       "id": "embr_manager",
       "name": "Script Manager",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "kind": "tool",
       "path": "scripts/embr_manager",
       "min_flame": "2025.0",
-      "digest": "c4311da5ae4a8f9b626f5359f7d7320690464a25b92bdd2c22b541a98c4d1d17",
+      "digest": "301ab8c046a1a66c1fefeed7a1ba45cb4bca043c3c63c998f9093aa3d42a98de",
       "files": [
         {
           "path": "embr_manager.py",
-          "sha256": "ae32197315f6d9311ed6cb39df46620b90203f1dfec61b1eacc1d12b21bd2df4"
+          "sha256": "96e5cdf64fe7c25d04a661bb15b6c814dab0298982b212acc5ae2a55835a39db"
         },
         {
           "path": "embr_sm_actions.py",
-          "sha256": "32b35c5f8cb79a3a207970c3ef4da7fd5f1cf55d818dcc4e246dfa0ff658f865"
+          "sha256": "86e8e22ca460cec620dece7504f03e5cd24791cadc267e1960e3e5ef9c6243e9"
         },
         {
           "path": "embr_sm_bootstrap.py",
@@ -109,7 +109,7 @@
         },
         {
           "path": "embr_sm_window.py",
-          "sha256": "1ebcc7c99f0fd22485cd1e23bb4d8b231f53db372400e0b2056955cdc8c7b4ca"
+          "sha256": "1fb80285d7cc2439ec062d4e7b42226de21e2ebac36ffc17f374d1e0ebf2fc94"
         }
       ],
       "depends": [
