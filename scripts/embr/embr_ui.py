@@ -24,8 +24,10 @@ EMBR_TEXT = "#E8E8E8"
 EMBR_MUTED = "#9B9DA1"
 
 # Frameless window chrome
-EMBR_WINDOW_RADIUS = 10
+EMBR_WINDOW_RADIUS = 6
 EMBR_TITLE_ICON_SIZE = 24
+EMBR_TITLE_BRAND_PT = 15
+EMBR_TITLE_BRAND_GAP = 5
 
 # Back-compat aliases used by older call sites / docs
 EMBR_ASH = EMBR_BG
@@ -161,7 +163,7 @@ def stylesheet() -> str:
         background-color: transparent;
     }}
     QLabel#embrBrand {{
-        font-size: 13px;
+        font-size: {EMBR_TITLE_BRAND_PT}px;
         font-weight: 600;
         color: {EMBR_TEXT};
     }}
@@ -296,7 +298,7 @@ def create_title_bar(window: Any, title: str) -> Any:
     left = QWidget(bar)
     left_l = QHBoxLayout(left)
     left_l.setContentsMargins(10, 0, 8, 0)
-    left_l.setSpacing(8)
+    left_l.setSpacing(EMBR_TITLE_BRAND_GAP)
     icon = QLabel(left)
     pix = logo_pixmap("embr-icon.svg", width=icon_px)
     if not pix.isNull():
@@ -305,7 +307,7 @@ def create_title_bar(window: Any, title: str) -> Any:
     left_l.addWidget(icon, 0, Qt.AlignmentFlag.AlignVCenter)
     brand = QLabel("Embr", left)
     brand.setObjectName("embrBrand")
-    brand.setFont(embr_font(13, bold=True))
+    brand.setFont(embr_font(EMBR_TITLE_BRAND_PT, bold=True))
     left_l.addWidget(brand, 0, Qt.AlignmentFlag.AlignVCenter)
     left_l.addStretch(1)
 
