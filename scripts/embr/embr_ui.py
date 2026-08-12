@@ -356,6 +356,10 @@ def stylesheet(*, combo_arrow_url: str | None = None) -> str:
         color: {EMBR_MUTED};
         font-size: 12px;
     }}
+    QLabel#embrMuted {{
+        color: {EMBR_MUTED};
+        font-size: 12px;
+    }}
     QComboBox {{
         background-color: {EMBR_SURFACE_RAISED};
         color: {EMBR_TEXT};

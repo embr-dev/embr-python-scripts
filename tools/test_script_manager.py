@@ -73,6 +73,8 @@ def main() -> None:
             vendor, catalog=cat, source_root=source, channel="dev"
         )
         assert (vendor / "embr").is_dir()
+        assert (vendor / "embr_manager").is_dir()
+        assert (vendor / "embr_preferences").is_dir()
         assert local.get_channel(vendor) == "dev"
         assert paths.vendor_install_root(Path(td)).name == "Embr"
 

@@ -56,7 +56,8 @@ docs/                   # ドキュメント（日本語）
 | ツールディレクトリ | `embr_` + snake_case | `embr_batch_organize` |
 | フック入口ファイル | ディレクトリ名と同じ `.py` | `embr_batch_organize/embr_batch_organize.py` |
 | メニュー第1階層 | **`Embr`** | Main Menu → Embr → … |
-| アクション表示名 | 短い英語 Title Case | `Organize Comp` |
+| アクション ID | 安定な snake_case | `script_manager`, `rename_segments` |
+| アクション表示名 | 短い英語 Title Case（動詞 + 対象） | `Organize Comp`, `Rename Segments` |
 | util モジュール | 短い snake_case | `embr.log`, `embr.paths` |
 
 - プレフィックス `embr_` で公式・他社スクリプトと衝突しにくくする。
@@ -64,19 +65,29 @@ docs/                   # ドキュメント（日本語）
 
 ---
 
-## 3. フック入口
+## 3. フック入口とメニュー
 
-1. **必要な** `get_*_custom_ui_actions` だけ定義する。
-2. `execute` は `_` 始まりの関数、または同パッケージの明示的な公開関数。
-3. `minimumVersion` は `"2025.0.0.0"` 以上。
-4. 選択は型を確認してから触る。想定外は英語でログして return（ホストを落とさない）。
+1. **必要な** `get_*_custom_ui_actions` だけ定義する（場所で文脈を分ける）。
+2. メニューは必ず **`embr.menus`** 経由（`order` の直書き禁止）。
+3. 新アクションは `scripts/embr/menus/defaults.json` に ID・caption・order・visible を追加する。
+4. `execute` は `_` 始まりの関数、または同パッケージの明示的な公開関数。
+5. 選択は型を確認してから触る。想定外は英語でログして return（ホストを落とさない）。
+
+| 面 | フック | 置くもの |
+|----|--------|----------|
+| Main Menu | `get_main_menu_custom_ui_actions` | Script Manager / Preferences などアプリ級 |
+| Timeline | `get_timeline_custom_ui_actions` | セグメント／シーケンス向け |
+| Media Panel | `get_media_panel_custom_ui_actions` | クリップ／フォルダ向け |
+| Batch など | 対応する `get_*` | そのコンテキスト向け |
+
+ユーザーの並び・表示/非表示は Main Menu → **Embr → Preferences**（prefs は常に `…/flame/embr/prefs.json`）。詳細は [preferences.md](./preferences.md)。
 
 最小形:
 
 ```python
 from __future__ import annotations
 
-from embr import log, version
+from embr import log, menus, version
 
 
 def _run(_selection) -> None:
@@ -84,19 +95,19 @@ def _run(_selection) -> None:
     log.info("Embr: hello")
 
 
-def get_main_menu_custom_ui_actions():
-    return [
-        {
-            "name": "Embr",
-            "actions": [
-                {
-                    "name": "Hello",
-                    "execute": _run,
-                    "minimumVersion": "2025.0.0.0",
-                }
-            ],
-        }
-    ]
+def get_timeline_custom_ui_actions():
+    return menus.group(
+        "timeline",
+        [
+            menus.action(
+                "timeline",
+                "hello_segments",
+                caption="Hello Segments",
+                execute=_run,
+                is_visible=_scope_segments,  # optional selection scope
+            ),
+        ],
+    )
 ```
 
 詳細は [api/hooks.md](./api/hooks.md)。
@@ -106,7 +117,7 @@ def get_main_menu_custom_ui_actions():
 ## 4. `embr` util の使い方
 
 ```python
-from embr import log, version, names, paths, hooks, ui
+from embr import log, version, names, paths, hooks, ui, menus
 ```
 
 | ルール | 内容 |
@@ -116,6 +127,7 @@ from embr import log, version, names, paths, hooks, ui
 | ログ | ユーザー向けは `embr.log`（文言は英語） |
 | コンソール文字 | Flame コンソール向けは **ASCII 寄り**（非 ASCII は文字化け実績あり） |
 | util 変更後 | `hooks.refresh()`（必要なら `invalidate=("embr",)`） |
+| メニュー | **`embr.menus`**（defaults + prefs）。`order` / ユーザー非表示を手で書かない |
 | UI | 色・フォント・ロゴは **`embr.ui` 経由のみ**（直書き禁止） |
 | PyFlame | **使わない・コピーしない**（[pyflame-reference.md](./pyflame-reference.md)） |
 
@@ -244,6 +256,7 @@ Flame 本体の最低版は別途 `min_flame` / `version.require_min("2025.0")`�
 | 前提・サポート | `docs/prerequisites.md` |
 | util API | `docs/embr-util.md`（+ 必要なら英語 docstring） |
 | 新ツール | `scripts/README.md` に1行 |
+| メニュー defaults / prefs | `docs/preferences.md` + `scripts/embr/menus/defaults.json` |
 | Flame API の解釈 | `docs/api/` |
 
 - **docs は日本語。**

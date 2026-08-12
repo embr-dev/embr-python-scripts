@@ -19,7 +19,7 @@ class BootstrapError(RuntimeError):
     """Raised when bootstrap fails."""
 
 
-BOOTSTRAP_PACKAGES = ("embr", "embr_manager")
+BOOTSTRAP_PACKAGES = ("embr", "embr_manager", "embr_preferences")
 # Install / Update runs these first (in order), then Rescan, then other packages.
 CORE_PACKAGE_ORDER = BOOTSTRAP_PACKAGES
 

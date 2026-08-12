@@ -1,11 +1,10 @@
 ################################################################################
-# Embr Script Manager
+# Embr Preferences
 #
-# Main Menu: Embr / Script Manager
+# Main Menu: Embr / Preferences
 #
 # Flame + DL_PYTHON_HOOK_PATH loads each .py by basename (not as a package).
-# Helpers use unique names (embr_sm_*.py). Import them as top-level modules
-# after putting this directory (and scripts/embr) on sys.path.
+# Helpers use unique names (embr_pref_*.py).
 ################################################################################
 
 from __future__ import annotations
@@ -13,7 +12,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-__version__ = "0.1.8"
+__version__ = "0.1.1"
 
 _DIR = Path(__file__).resolve().parent
 _SCRIPTS = _DIR.parent
@@ -32,14 +31,13 @@ def _ensure_import_paths() -> None:
 _ensure_import_paths()
 
 
-def _open_manager(_selection) -> None:
+def _open_preferences(_selection) -> None:
     import importlib
 
     _ensure_import_paths()
 
-    # Drop stale helper modules only (keep this hook module).
     for name in list(sys.modules):
-        if name.startswith("embr_sm_") or name in {
+        if name.startswith("embr_pref_") or name in {
             "embr_paths",
             "embr_log",
             "embr_hooks",
@@ -55,17 +53,16 @@ def _open_manager(_selection) -> None:
     importlib.invalidate_caches()
     _ensure_import_paths()
 
-    # Import helpers by unique basename — do not rely on package relative imports.
     import embr_log as log
     import embr_version as version
 
     version.require_min("2025.0")
     try:
-        import embr_sm_window
+        import embr_pref_window
 
-        embr_sm_window.open_script_manager()
+        embr_pref_window.open_preferences()
     except Exception as exc:
-        log.error(f"Embr Script Manager: failed to open - {exc}", duration=10)
+        log.error(f"Embr Preferences: failed to open - {exc}", duration=10)
         raise
 
 
@@ -77,9 +74,9 @@ def get_main_menu_custom_ui_actions():
         [
             menus.action(
                 "main_menu",
-                "script_manager",
-                caption="Script Manager",
-                execute=_open_manager,
+                "preferences",
+                caption="Preferences",
+                execute=_open_preferences,
             ),
         ],
     )

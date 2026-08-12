@@ -20,6 +20,7 @@ if str(_DIR) not in sys.path:
 
 import embr_hooks as hooks
 import embr_log as log
+import embr_menus as menus
 import embr_names as names
 import embr_paths as paths
 import embr_ui as ui
@@ -28,10 +29,11 @@ import embr_version as version
 __all__ = [
     "hooks",
     "log",
+    "menus",
     "names",
     "paths",
     "ui",
     "version",
 ]
 
-__version__ = "0.1.6"
+__version__ = "0.2.1"

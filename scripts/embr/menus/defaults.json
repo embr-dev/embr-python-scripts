@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "surfaces": {
+    "main_menu": [
+      {
+        "id": "script_manager",
+        "caption": "Script Manager",
+        "order": 100,
+        "visible": true
+      },
+      {
+        "id": "preferences",
+        "caption": "Preferences",
+        "order": 200,
+        "visible": true
+      }
+    ],
+    "timeline": [],
+    "media_panel": [],
+    "batch": [],
+    "action": [],
+    "mediahub_files": [],
+    "mediahub_projects": [],
+    "mediahub_archives": []
+  }
+}

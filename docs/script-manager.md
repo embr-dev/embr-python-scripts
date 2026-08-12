@@ -4,7 +4,7 @@ GitHub 上のカタログを正とし、ローカルの Embr インストール�
 
 | 項目 | 内容 |
 |------|------|
-| メニュー | Main Menu → **Embr → Script Manager** |
+| メニュー | Main Menu → **Embr → Script Manager**（並びは `embr.menus` / Preferences） |
 | パッケージ | `scripts/embr_manager/` |
 | カタログ | [`catalog/catalog.json`](../catalog/catalog.json) |
 | 生成 | `python3 tools/gen_catalog.py`（`ref` は現在の git branch） |
@@ -26,6 +26,7 @@ GitHub 上のカタログを正とし、ローカルの Embr インストール�
   .embr/state.json      # channel + installed digests
   embr/                 # Core
   embr_manager/
+  embr_preferences/
   embr_<tool>/
 ```
 
@@ -39,7 +40,7 @@ Shared に書けない場合は権限昇格せず、英語で理由と対処（U
 
 選択に Core / Script Manager とその他が混在する場合:
 
-1. **Embr Core** → **Script Manager**（この順）  
+1. **Embr Core** → **Script Manager** → **Preferences**（この順）  
 2. **Rescan Python Hooks**  
 3. その他のパッケージ  
 4. **Rescan Python Hooks**
@@ -78,7 +79,7 @@ cd embr-python-scripts
 ## ブートストラップ
 
 1. `bootstrap_from_channel.py`、または初回ダイアログで User / Shared  
-2. カタログから `embr` + `embr_manager` を `…/python/Embr/` へ配置  
+2. カタログから `embr` + `embr_manager` + `embr_preferences` を `…/python/Embr/` へ配置  
 3. **Rescan Python Hooks**  
 4. Main Menu → Embr → Script Manager  
 

@@ -14,13 +14,14 @@ Flame 2025.0+ 向けの共通ユーティリティ。MIT。PyFlame は使わな�
 | `embr.paths` | → `embr_paths.py` |
 | `embr.names` | → `embr_names.py` |
 | `embr.ui` | → `embr_ui.py` |
+| `embr.menus` | → `embr_menus.py`（defaults / prefs / Flame action dict） |
 
 実ファイルは Flame の basename 衝突を避けるため `embr_*.py`。`from embr import paths` などは `__init__.py` がエイリアスする。
 
 ## 使い方
 
 ```python
-from embr import log, version, names, paths, hooks, ui
+from embr import log, version, names, paths, hooks, ui, menus
 
 version.require_min("2025.0")
 log.info("hello")
@@ -32,9 +33,23 @@ print(paths.flame_user_python(), paths.flame_shared_python())
 # layout.addWidget(title_bar)
 # # or theme only: ui.apply_embr_theme(window)
 
+# Menu (order / visibility from defaults + user prefs):
+# return menus.group("timeline", [menus.action("timeline", "rename_segments", ...)])
+
 # 開発中に embr を直したあと:
 hooks.refresh()  # embr を sys.modules から外してから Rescan
 ```
+
+### メニュー（`embr.menus`）
+
+| API | 役割 |
+|-----|------|
+| `menus.action(surface, id, execute=…)` | Flame アクション dict（ユーザー非表示なら `None`） |
+| `menus.group(surface, […])` | `Embr` サブメニューで包む |
+| `menus.effective_entries(surface)` | Preferences 用の合成一覧 |
+| `menus.set_surface_prefs` / `reset_menu_prefs` | prefs 書き込み |
+
+デフォルト表: `scripts/embr/menus/defaults.json`。ユーザー設定: [preferences.md](./preferences.md)。
 
 ## ブランド資産
 

@@ -53,6 +53,24 @@ def flame_user_python() -> Path:
     return Path.home() / "flame" / "python"
 
 
+def flame_user_embr_dir() -> Path:
+    """Return the per-user Embr config directory (``…/flame/embr``).
+
+    Always under the current user's Flame folder — independent of whether
+    packages are installed in User or Shared python.
+    """
+    if sys.platform == "darwin":
+        return (
+            Path.home()
+            / "Library"
+            / "Preferences"
+            / "Autodesk"
+            / "flame"
+            / "embr"
+        )
+    return Path.home() / "flame" / "embr"
+
+
 def flame_shared_python() -> Path:
     """Return the studio shared Flame python hooks directory."""
     return Path("/opt/Autodesk/shared/python")
