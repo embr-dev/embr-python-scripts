@@ -35,6 +35,7 @@ EMBR_CONTROL_MIN_HEIGHT = 30
 EMBR_TITLE_ICON_SIZE = 24
 EMBR_TITLE_CTRL_ICON_SIZE = 16
 EMBR_TITLE_BRAND_PT = 16
+EMBR_TITLE_WINDOW_PT = 15
 EMBR_TITLE_BRAND_GAP = 4
 EMBR_TITLE_BTN = 36
 
@@ -56,6 +57,7 @@ ICON_MAXIMIZE = "\ue3c6"  # crop_square
 ICON_RESTORE = "\ue3e0"  # filter_none
 ICON_CLOSE = "\ue5cd"  # close
 ICON_EXPAND_MORE = "\ue5cf"  # expand_more (dropdown chevron)
+ICON_ARROW_FORWARD = "\ue5c8"  # arrow_forward
 
 _ICON_TOOLTIPS = {
     ICON_MINIMIZE: "Minimize",
@@ -367,8 +369,8 @@ def stylesheet(*, combo_arrow_url: str | None = None) -> str:
         color: {EMBR_TEXT};
     }}
     QLabel#embrWindowTitle {{
-        font-size: 13px;
-        font-weight: 500;
+        font-size: {EMBR_TITLE_WINDOW_PT}px;
+        font-weight: 600;
         color: {EMBR_TEXT};
     }}
     QLabel#embrRoot {{
@@ -995,7 +997,7 @@ def create_title_bar(window: Any, title: str) -> Any:
     title_label = QLabel(title, bar)
     title_label.setObjectName("embrWindowTitle")
     title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    title_label.setFont(embr_font(13))
+    title_label.setFont(embr_font(EMBR_TITLE_WINDOW_PT, bold=True))
 
     right = QWidget(bar)
     right_l = QHBoxLayout(right)

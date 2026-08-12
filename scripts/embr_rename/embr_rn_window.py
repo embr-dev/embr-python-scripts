@@ -48,11 +48,23 @@ class _ReplaceRow(QWidget):
         layout.setSpacing(embr_ui.EMBR_SPACE_2)
         self.find_edit = QLineEdit()
         self.find_edit.setPlaceholderText("Find")
+        arrow = QLabel()
+        arrow.setObjectName("embrReplaceArrow")
+        pix = embr_ui.material_icon_pixmap(
+            embr_ui.ICON_ARROW_FORWARD,
+            embr_ui.EMBR_SPACE_4,
+            color=embr_ui.EMBR_MUTED,
+        )
+        if not pix.isNull():
+            arrow.setPixmap(pix)
+        arrow.setFixedSize(embr_ui.EMBR_SPACE_4, embr_ui.EMBR_SPACE_4)
+        arrow.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.replace_edit = QLineEdit()
         self.replace_edit.setPlaceholderText("Replace")
         self.btn_remove = QPushButton("Remove")
         self.btn_remove.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         layout.addWidget(self.find_edit, 1)
+        layout.addWidget(arrow, 0, Qt.AlignmentFlag.AlignVCenter)
         layout.addWidget(self.replace_edit, 1)
         layout.addWidget(self.btn_remove)
 
@@ -179,7 +191,9 @@ class RenameWindow(QDialog):
 
         saved = rn_prefs.load_rename_prefs()
         self._pattern.setText(saved["pattern"])
-        pairs = saved["replacements"] or [("", "")]
+        pairs = list(saved["replacements"] or [])
+        while len(pairs) < 3:
+            pairs.append(("", ""))
         for find, replace in pairs:
             self._add_replace_row(find, replace)
 
