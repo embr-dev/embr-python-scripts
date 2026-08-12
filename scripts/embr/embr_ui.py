@@ -291,10 +291,11 @@ def stylesheet(*, combo_arrow_url: str | None = None) -> str:
         height: 16px;
     }}
     QComboBox::drop-down {{
-        border: none;
-        width: 26px;
         subcontrol-origin: padding;
         subcontrol-position: center right;
+        width: 26px;
+        border: none;
+        background: transparent;
     }}
     """
         if arrow
@@ -390,6 +391,7 @@ def stylesheet(*, combo_arrow_url: str | None = None) -> str:
     QComboBox QAbstractItemView::item {{
         padding: 6px 8px;
         min-height: 22px;
+        border: none;
         border-radius: 3px;
     }}
     QComboBox QAbstractItemView::item:selected {{
@@ -397,26 +399,6 @@ def stylesheet(*, combo_arrow_url: str | None = None) -> str:
         color: {EMBR_TEXT};
     }}
     QComboBox QAbstractItemView::item:hover {{
-        background-color: {EMBR_SURFACE_RAISED};
-        color: {EMBR_TEXT};
-    }}
-    QListView#embrComboPopup {{
-        background-color: {EMBR_SURFACE};
-        color: {EMBR_TEXT};
-        border: 1px solid {EMBR_BORDER};
-        outline: none;
-        padding: 2px;
-    }}
-    QListView#embrComboPopup::item {{
-        padding: 6px 8px;
-        min-height: 22px;
-        border-radius: 3px;
-    }}
-    QListView#embrComboPopup::item:selected {{
-        background-color: {EMBR_EMBER_DEEP};
-        color: {EMBR_TEXT};
-    }}
-    QListView#embrComboPopup::item:hover {{
         background-color: {EMBR_SURFACE_RAISED};
         color: {EMBR_TEXT};
     }}
@@ -700,45 +682,125 @@ def _apply_rounded_mask(window: Any, radius: int = EMBR_WINDOW_RADIUS) -> None:
 
 
 def style_combo(combo: Any) -> None:
-    """Force Embr styling on a combo popup (avoids native/Fusion blue chrome)."""
-    from PySide6.QtCore import Qt
-    from PySide6.QtWidgets import QListView
+    """Polish combo popup size and chrome (single border, width matches combo).
+
+    On macOS the default style can use a native menu (checkmark + scroll
+    chevron, wrong first-open height). Force Fusion for a Qt popup that
+    respects Embr QSS. Size the popup to the combo width and content height
+    so the first open matches later opens (no leftover scroll arrow).
+
+    Popup windows do not inherit the parent dialog stylesheet, so the view
+    gets an explicit Embr stylesheet + palette here.
+    """
+    from PySide6.QtCore import QTimer, Qt
+    from PySide6.QtGui import QColor, QPalette
+    from PySide6.QtWidgets import QFrame, QStyleFactory
 
     if getattr(combo, "_embr_combo_styled", False):
         return
-    view = QListView(combo)
+
+    fusion = QStyleFactory.create("Fusion")
+    if fusion is not None:
+        combo.setStyle(fusion)
+
+    view = combo.view()
     view.setObjectName("embrComboPopup")
     view.setMouseTracking(True)
-    view.setFrameShape(QListView.Shape.NoFrame)
-    combo.setView(view)
-    combo.setMaxVisibleItems(12)
+    view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+    try:
+        view.setFrameShape(QFrame.Shape.NoFrame)
+    except Exception:
+        pass
     try:
         combo.setAttribute(Qt.WidgetAttribute.WA_MacShowFocusRect, False)
     except Exception:
         pass
-    # Popup is a separate top-level window; style it when first shown.
-    def _on_show_popup() -> None:
+    combo.setMaxVisibleItems(12)
+
+    view.setStyleSheet(
+        f"""
+        QListView {{
+            background-color: {EMBR_SURFACE};
+            color: {EMBR_TEXT};
+            border: 1px solid {EMBR_BORDER};
+            outline: none;
+            padding: 2px;
+        }}
+        QListView::item {{
+            padding: 6px 8px;
+            min-height: 22px;
+            border: none;
+            border-radius: 3px;
+        }}
+        QListView::item:selected,
+        QListView::item:selected:active,
+        QListView::item:selected:!active {{
+            background-color: {EMBR_EMBER_DEEP};
+            color: {EMBR_TEXT};
+        }}
+        QListView::item:hover:!selected {{
+            background-color: {EMBR_SURFACE_RAISED};
+            color: {EMBR_TEXT};
+        }}
+        """
+    )
+    pal = view.palette()
+    for group in (QPalette.ColorGroup.Active, QPalette.ColorGroup.Inactive):
+        pal.setColor(group, QPalette.ColorRole.Base, QColor(EMBR_SURFACE))
+        pal.setColor(group, QPalette.ColorRole.Text, QColor(EMBR_TEXT))
+        pal.setColor(group, QPalette.ColorRole.Window, QColor(EMBR_SURFACE))
+        pal.setColor(group, QPalette.ColorRole.Highlight, QColor(EMBR_EMBER_DEEP))
+        pal.setColor(group, QPalette.ColorRole.HighlightedText, QColor(EMBR_TEXT))
+    view.setPalette(pal)
+
+    def _row_height() -> int:
+        hint = int(view.sizeHintForRow(0)) if combo.count() else 0
+        fm_h = int(combo.fontMetrics().height())
+        return max(hint, fm_h + 14, 28)
+
+    def _fit_popup() -> None:
         popup = view.window()
         if popup is None or popup is combo:
             return
+        # One border only (on the list). Container must not draw its own frame.
         popup.setStyleSheet(
             f"""
             QFrame {{
                 background-color: {EMBR_SURFACE};
-                border: 1px solid {EMBR_BORDER};
+                border: none;
+                padding: 0px;
+                margin: 0px;
             }}
             """
         )
+        target_w = max(int(combo.width()), 1)
+        rows = min(int(combo.count()), int(combo.maxVisibleItems()))
+        target_h = _row_height() * max(rows, 1) + 6
+        fits = combo.count() <= combo.maxVisibleItems()
+        view.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+            if fits
+            else Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
+        view.setFixedWidth(target_w)
+        view.setMinimumHeight(0)
+        view.setMaximumHeight(16777215)
+        popup.setMinimumSize(0, 0)
+        popup.setMaximumSize(16777215, 16777215)
+        popup.resize(target_w, target_h)
+        popup.setFixedSize(target_w, target_h)
 
-    combo._embr_combo_styled = True  # type: ignore[attr-defined]
-    # showPopup is a method — wrap once
     _orig = combo.showPopup
 
     def _show() -> None:
+        view.setMinimumWidth(max(int(combo.width()), 1))
         _orig()
-        _on_show_popup()
+        _fit_popup()
+        QTimer.singleShot(0, _fit_popup)
 
     combo.showPopup = _show  # type: ignore[method-assign]
+    combo._embr_combo_styled = True  # type: ignore[attr-defined]
+
 
 
 def polish_embr_widgets(root: Any) -> None:
