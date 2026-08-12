@@ -53,11 +53,12 @@ Satoshi はランタイムで使わない。UI は必ず `embr.ui` 経由。
 
 PySide6 では次のどちらか（推奨はフォント同梱）:
 
-1. **フォント（推奨）**  
-   - [Google Material Icons](https://github.com/google/material-design-icons) の `MaterialIcons-Regular.ttf`（または Material Symbols）を  
+1. **フォント + QRawFont（推奨）**  
+   - [Google Material Icons](https://github.com/google/material-design-icons) の `MaterialIcons-Regular.ttf` を  
      `scripts/embr/assets/fonts/MaterialIcons/` に同梱（ライセンスファイルも）。  
-   - `QFontDatabase.addApplicationFont` で読み、コードポイント（例: `\ue5cd`）を `QLabel` / `QPushButton` に載せる。  
-   - Figtree と同様、`embr.ui` に `material_icon(name_or_codepoint, size)` を足す。
+   - **Qt の `QLabel`/`QPushButton` にコードポイントを直接載せると文字化けしやすい**ため、  
+     `ui.material_icon_pixmap(codepoint, size)` で `QRawFont` 描画 → `QIcon` にする。  
+   - タイトルバーの min/max/close はこの方式。
 
 2. **SVG**  
    - 使うアイコンだけ SVG を `assets/icons/` に置き、既存の `logo_pixmap` と同様に `QSvgRenderer` で `QPixmap` / `QIcon` 化。  

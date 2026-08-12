@@ -26,8 +26,8 @@ EMBR_MUTED = "#9B9DA1"
 # Frameless window chrome
 EMBR_WINDOW_RADIUS = 6
 EMBR_TITLE_ICON_SIZE = 24
-EMBR_TITLE_BRAND_PT = 15
-EMBR_TITLE_BRAND_GAP = 0
+EMBR_TITLE_BRAND_PT = 17
+EMBR_TITLE_BRAND_GAP = 4
 
 # Back-compat aliases used by older call sites / docs
 EMBR_ASH = EMBR_BG
@@ -161,7 +161,7 @@ def _ensure_material_icons_loaded() -> str:
 
 
 def material_font(point_size: int = 18) -> Any:
-    """Return a ``QFont`` for Material Icons codepoints."""
+    """Return a ``QFont`` for Material Icons (prefer ``material_icon_pixmap``)."""
     from PySide6.QtGui import QFont
 
     font = QFont(_ensure_material_icons_loaded())
@@ -176,6 +176,57 @@ def material_icon_text(codepoint: str) -> str:
     """Return a Material Icons glyph string (PUA codepoint)."""
     _ensure_material_icons_loaded()
     return codepoint
+
+
+def material_icon_pixmap(
+    codepoint: str,
+    pixel_size: int = 20,
+    *,
+    color: str = EMBR_TEXT,
+) -> Any:
+    """Rasterize a Material Icons codepoint via ``QRawFont`` (reliable across Qt)."""
+    from PySide6.QtCore import QPointF, Qt
+    from PySide6.QtGui import QColor, QGlyphRun, QPainter, QPixmap, QRawFont
+
+    path = material_icons_dir() / "MaterialIcons-Regular.ttf"
+    if not path.is_file():
+        return QPixmap()
+
+    raw = QRawFont(str(path.resolve()), float(pixel_size))
+    if not raw.isValid():
+        return QPixmap()
+    glyphs = raw.glyphIndexesForString(codepoint)
+    if not glyphs:
+        return QPixmap()
+
+    advances = raw.advancesForGlyphIndexes(glyphs)
+    total_w = sum(float(a.x()) for a in advances)
+    height = max(pixel_size, int(raw.ascent() + raw.descent()) + 2)
+    width = max(pixel_size, int(total_w) + 2)
+    pix = QPixmap(width, height)
+    pix.fill(Qt.GlobalColor.transparent)
+
+    run = QGlyphRun()
+    run.setRawFont(raw)
+    run.setGlyphIndexes(glyphs)
+    positions: list[QPointF] = []
+    x = 0.0
+    for adv in advances:
+        positions.append(QPointF(x, 0.0))
+        x += float(adv.x())
+    run.setPositions(positions)
+
+    painter = QPainter(pix)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
+    painter.setPen(QColor(color))
+    origin = QPointF(
+        (width - total_w) / 2.0,
+        (height + float(raw.ascent()) - float(raw.descent())) / 2.0,
+    )
+    painter.drawGlyphRun(origin, run)
+    painter.end()
+    return pix
 
 
 def logo_pixmap(name: str = "embr-mark.svg", width: int = 120) -> Any:
@@ -476,24 +527,35 @@ def create_title_bar(window: Any, title: str) -> Any:
     right_l.addStretch(1)
 
     def _win_btn(glyph: str, object_name: str) -> QPushButton:
-        btn = QPushButton(material_icon_text(glyph), right)
+        from PySide6.QtCore import QSize
+        from PySide6.QtGui import QIcon
+
+        btn = QPushButton(right)
         btn.setObjectName(object_name)
-        btn.setFont(material_font(glyph_px))
         btn.setCursor(Qt.CursorShape.ArrowCursor)
         btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         btn.setFixedSize(bar_h, bar_h)
         btn.setToolTip(_ICON_TOOLTIPS.get(glyph, ""))
+        icon_pix = material_icon_pixmap(glyph, glyph_px, color=EMBR_TEXT)
+        if not icon_pix.isNull():
+            btn.setIcon(QIcon(icon_pix))
+            btn.setIconSize(QSize(glyph_px, glyph_px))
+        else:
+            # Last resort: empty control rather than mojibake boxes.
+            btn.setText("")
+        btn._embr_icon_glyph = glyph  # type: ignore[attr-defined]
         return btn
 
     btn_min = _win_btn(ICON_MINIMIZE, "embrWinBtn")
     btn_max = _win_btn(ICON_MAXIMIZE, "embrWinBtn")
     btn_close = _win_btn(ICON_CLOSE, "embrWinClose")
+    # Close hover: red background (icon stays light).
     right_l.addWidget(btn_min)
     right_l.addWidget(btn_max)
     right_l.addWidget(btn_close)
 
     # Equal side columns keep the title optically centered.
-    side_w = max(148, bar_h * 3)
+    side_w = max(160, bar_h * 3)
     left.setFixedWidth(side_w)
     right.setFixedWidth(side_w)
     root.addWidget(left, 0)
@@ -503,18 +565,27 @@ def create_title_bar(window: Any, title: str) -> Any:
     state: dict[str, Any] = {"drag_pos": None}
     chrome_btns = {btn_min, btn_max, btn_close}
 
+    def _set_max_icon(glyph: str) -> None:
+        from PySide6.QtCore import QSize
+        from PySide6.QtGui import QIcon
+
+        btn_max._embr_icon_glyph = glyph  # type: ignore[attr-defined]
+        btn_max.setToolTip(_ICON_TOOLTIPS.get(glyph, ""))
+        icon_pix = material_icon_pixmap(glyph, glyph_px, color=EMBR_TEXT)
+        if not icon_pix.isNull():
+            btn_max.setIcon(QIcon(icon_pix))
+            btn_max.setIconSize(QSize(glyph_px, glyph_px))
+
     def _minimize() -> None:
         window.showMinimized()
 
     def _toggle_max() -> None:
         if window.isMaximized():
             window.showNormal()
-            btn_max.setText(material_icon_text(ICON_MAXIMIZE))
-            btn_max.setToolTip(_ICON_TOOLTIPS[ICON_MAXIMIZE])
+            _set_max_icon(ICON_MAXIMIZE)
         else:
             window.showMaximized()
-            btn_max.setText(material_icon_text(ICON_RESTORE))
-            btn_max.setToolTip(_ICON_TOOLTIPS[ICON_RESTORE])
+            _set_max_icon(ICON_RESTORE)
 
     def _close() -> None:
         window.close()
