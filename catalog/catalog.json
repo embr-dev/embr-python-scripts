@@ -6,15 +6,15 @@
     {
       "id": "embr",
       "name": "Embr Core",
-      "version": "0.2.18",
+      "version": "0.2.19",
       "kind": "library",
       "path": "scripts/embr",
       "min_flame": "2025.0",
-      "digest": "0b5b19bfb851ba89a65f7dddb2600aa2c0c6a579987750518d0bb3ad057d908e",
+      "digest": "e94cbfe0d6e15451a49b53ca9ed7ce511b026f3ef8103b23550ef8973f206cb8",
       "files": [
         {
           "path": "__init__.py",
-          "sha256": "f68cf5e5a0d5fcfabddc156ac6b5d18b486238302c140637782ee7b44ee5feba"
+          "sha256": "aceabc483a3481ff9491630f822b5a9b496071e4f00d34e253c1d7e2c3842f24"
         },
         {
           "path": "assets/fonts/Figtree/Figtree-Bold.ttf",
@@ -74,7 +74,7 @@
         },
         {
           "path": "embr_ui.py",
-          "sha256": "f7bf574ada4df78bf88c6294d870ad6fd2dad82b3916eda3874b011ba97a7f27"
+          "sha256": "cd7a54ce78a94179f26b0aa89e7b24468eb5bffcef1f9c69d135a176ea0ab9e5"
         },
         {
           "path": "embr_version.py",
@@ -149,15 +149,15 @@
     {
       "id": "embr_rename",
       "name": "Rename",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "kind": "tool",
       "path": "scripts/embr_rename",
       "min_flame": "2025.0",
-      "digest": "51b5a518a9352ddf725daeaf7a97cd1c6f5c0e57d7caf1082d86f43f3e6e8852",
+      "digest": "4f526ab7625ddae463f21bc0826d73fd67d96767b46a58015e0fd2672df58f26",
       "files": [
         {
           "path": "embr_rename.py",
-          "sha256": "782fd7e613cdf278cf8ded345e0be4ca175c1c0c128446dfa431a21e049d4024"
+          "sha256": "973a38512d0360f3fecc4f710b6c11019b568c795eb268160f0eee63bdff3cb6"
         },
         {
           "path": "embr_rn_prefs.py",
@@ -173,7 +173,7 @@
         },
         {
           "path": "embr_rn_window.py",
-          "sha256": "76d0fb4235b857a4058cb2926e040010e7a529df06d762806274a8f37cf27471"
+          "sha256": "225f63b4fff04c13e1917b03155310f25820d1bb62c84f5ac952afc54c4be4f2"
         }
       ],
       "depends": [

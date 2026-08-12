@@ -625,6 +625,33 @@ def stylesheet(*, combo_arrow_url: str | None = None) -> str:
         color: {EMBR_TEXT};
         background: transparent;
     }}
+    QLabel#embrSection {{
+        color: {EMBR_MUTED};
+        font-size: 12px;
+        font-weight: 600;
+        padding: 0px;
+        background: transparent;
+    }}
+    QLineEdit#embrPreview {{
+        background-color: {EMBR_SURFACE};
+        color: {EMBR_TEXT};
+        border: 1px solid {EMBR_BORDER};
+        border-radius: {r}px;
+        min-height: {ctrl_h}px;
+        max-height: {ctrl_h}px;
+        padding: 0px {s2}px;
+        selection-background-color: {EMBR_EMBER_DEEP};
+        selection-color: {EMBR_TEXT};
+    }}
+    QFrame#embrHairline {{
+        background-color: {EMBR_BORDER};
+        border: none;
+        max-height: 1px;
+        margin: {s1}px 0px;
+    }}
+    QWidget#embrReplaceHost {{
+        background-color: {EMBR_SURFACE};
+    }}
     """
 
 

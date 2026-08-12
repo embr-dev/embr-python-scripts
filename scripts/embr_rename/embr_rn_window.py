@@ -8,6 +8,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -25,12 +26,26 @@ import embr_rn_tokens as tokens
 import embr_ui as embr_ui
 
 
+def _section_label(text: str) -> QLabel:
+    lab = QLabel(text)
+    lab.setObjectName("embrSection")
+    return lab
+
+
+def _hairline() -> QFrame:
+    line = QFrame()
+    line.setObjectName("embrHairline")
+    line.setFrameShape(QFrame.Shape.HLine)
+    line.setFixedHeight(1)
+    return line
+
+
 class _ReplaceRow(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(8)
+        layout.setSpacing(embr_ui.EMBR_SPACE_2)
         self.find_edit = QLineEdit()
         self.find_edit.setPlaceholderText("Find")
         self.replace_edit = QLineEdit()
@@ -63,21 +78,34 @@ class RenameWindow(QDialog):
         layout.addWidget(title_bar)
 
         body = QVBoxLayout()
-        body.setContentsMargins(12, 12, 12, 12)
-        body.setSpacing(8)
+        body.setContentsMargins(
+            embr_ui.EMBR_SPACE_3,
+            embr_ui.EMBR_SPACE_3,
+            embr_ui.EMBR_SPACE_3,
+            embr_ui.EMBR_SPACE_3,
+        )
+        body.setSpacing(embr_ui.EMBR_SPACE_2)
 
-        self._sel_label = QLabel(rn_sel.selection_summary(self._selection))
-        self._sel_label.setObjectName("embrMuted")
-        self._sel_label.setWordWrap(True)
-        body.addWidget(self._sel_label)
+        # --- Preview (result first) ---
+        body.addWidget(_section_label("Preview"))
+        self._preview = QLineEdit()
+        self._preview.setObjectName("embrPreview")
+        self._preview.setReadOnly(True)
+        self._preview.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self._preview.setPlaceholderText("—")
+        body.addWidget(self._preview)
 
-        body.addWidget(QLabel("Pattern"))
+        body.addWidget(_hairline())
+
+        # --- Pattern + tokens ---
+        body.addWidget(_section_label("Pattern"))
         self._pattern = QLineEdit()
         self._pattern.setPlaceholderText("<name>_<date@YYMMDD>")
         body.addWidget(self._pattern)
 
         token_row = QHBoxLayout()
-        token_row.addWidget(QLabel("Insert:"))
+        token_row.setSpacing(embr_ui.EMBR_SPACE_2)
+        token_row.setContentsMargins(0, 0, 0, 0)
         self._btn_tok_name = QPushButton("name")
         self._btn_tok_date = QPushButton("date")
         for btn in (self._btn_tok_name, self._btn_tok_date):
@@ -86,35 +114,39 @@ class RenameWindow(QDialog):
         token_row.addStretch(1)
         body.addLayout(token_row)
 
+        body.addWidget(_hairline())
+
+        # --- Replace ---
         replace_header = QHBoxLayout()
-        replace_header.addWidget(QLabel("Find / Replace"))
-        replace_header.addStretch(1)
+        replace_header.setSpacing(embr_ui.EMBR_SPACE_2)
+        replace_header.setContentsMargins(0, 0, 0, 0)
+        replace_header.addWidget(_section_label("Replace"), 1)
         self._btn_add_replace = QPushButton("Add")
         self._btn_add_replace.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         replace_header.addWidget(self._btn_add_replace)
         body.addLayout(replace_header)
 
         self._replace_host = QVBoxLayout()
-        self._replace_host.setSpacing(8)
+        self._replace_host.setSpacing(embr_ui.EMBR_SPACE_2)
+        self._replace_host.setContentsMargins(
+            embr_ui.EMBR_SPACE_2,
+            embr_ui.EMBR_SPACE_2,
+            embr_ui.EMBR_SPACE_2,
+            embr_ui.EMBR_SPACE_2,
+        )
         replace_wrap = QWidget()
+        replace_wrap.setObjectName("embrReplaceHost")
         replace_wrap.setLayout(self._replace_host)
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setWidget(replace_wrap)
         scroll.setMinimumHeight(96)
         scroll.setMaximumHeight(160)
-        body.addWidget(scroll)
+        body.addWidget(scroll, 1)
 
-        body.addWidget(QLabel("Preview (first)"))
-        self._before = QLabel("Before: —")
-        self._after = QLabel("After: —")
-        self._more = QLabel("")
-        self._more.setObjectName("embrMuted")
-        for lab in (self._before, self._after, self._more):
-            lab.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-            body.addWidget(lab)
-
+        # --- Actions ---
         buttons = QHBoxLayout()
+        buttons.setSpacing(embr_ui.EMBR_SPACE_2)
         buttons.addStretch(1)
         self._btn_cancel = QPushButton("Cancel")
         self._btn_rename = QPushButton("Rename")
@@ -125,7 +157,7 @@ class RenameWindow(QDialog):
         buttons.addWidget(self._btn_rename)
         body.addLayout(buttons)
 
-        layout.addLayout(body)
+        layout.addLayout(body, 1)
 
         self._status = QLabel()
         self._status.setObjectName("embrStatus")
@@ -137,7 +169,7 @@ class RenameWindow(QDialog):
         self._status.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         layout.addWidget(self._status)
 
-        self.resize(520, 460)
+        self.resize(520, 480)
 
         saved = rn_prefs.load_rename_prefs()
         self._pattern.setText(saved["pattern"])
@@ -155,7 +187,6 @@ class RenameWindow(QDialog):
         self._update_preview()
         if not self._renameable:
             self._btn_rename.setEnabled(False)
-            self._status.setText("No renameable objects in the cached selection.")
 
     def _insert_token(self, token: str) -> None:
         self._pattern.insert(token)
@@ -190,23 +221,35 @@ class RenameWindow(QDialog):
                 pairs.append((widget.find_edit.text(), widget.replace_edit.text()))
         return pairs
 
+    def _status_selection_text(self, *, original: str | None = None) -> str:
+        summary = rn_sel.selection_summary(self._selection)
+        if not self._renameable:
+            return f"{summary}  ·  No renameable objects"
+        extra = len(self._renameable) - 1
+        parts = [summary]
+        if original:
+            parts.append(f"from “{original}”")
+        if extra > 0:
+            parts.append(f"+{extra} more")
+        return "  ·  ".join(parts)
+
     def _update_preview(self) -> None:
         if not self._renameable:
-            self._before.setText("Before: —")
-            self._after.setText("After: —")
-            self._more.setText("")
+            self._preview.clear()
+            self._preview.setPlaceholderText("—")
+            self._status.setText(self._status_selection_text())
             return
         first = self._renameable[0]
         original = tokens.object_name(first)
         pattern = self._pattern.text() or tokens.DEFAULT_PATTERN
         new_name = tokens.compute_new_name(original, pattern, self._collect_pairs())
-        self._before.setText(f"Before: {original or '(empty)'}")
-        self._after.setText(f"After: {new_name or '(empty — will skip)'}")
-        extra = len(self._renameable) - 1
-        if extra > 0:
-            self._more.setText(f"+ {extra} more will be renamed")
+        if new_name:
+            self._preview.setText(new_name)
+            self._preview.setPlaceholderText("")
         else:
-            self._more.setText("")
+            self._preview.clear()
+            self._preview.setPlaceholderText("(empty — will skip)")
+        self._status.setText(self._status_selection_text(original=original or None))
 
     def _apply_rename(self) -> None:
         pattern = self._pattern.text() or tokens.DEFAULT_PATTERN
