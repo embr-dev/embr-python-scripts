@@ -23,6 +23,10 @@ EMBR_BORDER = "#4C4E52"
 EMBR_TEXT = "#E8E8E8"
 EMBR_MUTED = "#9B9DA1"
 
+# Frameless window chrome
+EMBR_WINDOW_RADIUS = 10
+EMBR_TITLE_ICON_SIZE = 24
+
 # Back-compat aliases used by older call sites / docs
 EMBR_ASH = EMBR_BG
 EMBR_ASH_COOL = EMBR_MUTED
@@ -149,6 +153,8 @@ def stylesheet() -> str:
     QWidget#embrTitleBar {{
         background-color: {EMBR_SURFACE};
         border-bottom: 1px solid {EMBR_BORDER};
+        border-top-left-radius: {EMBR_WINDOW_RADIUS}px;
+        border-top-right-radius: {EMBR_WINDOW_RADIUS}px;
     }}
     QWidget#embrTitleBar QWidget,
     QWidget#embrTitleBar QLabel {{
@@ -239,6 +245,38 @@ def apply_embr_theme(widget: Any) -> None:
     widget.setFont(embr_font(12))
 
 
+def _apply_rounded_mask(window: Any, radius: int = EMBR_WINDOW_RADIUS) -> None:
+    """Clip a frameless window to a rounded rectangle (including children)."""
+    from PySide6.QtCore import QEvent, QObject, QRectF
+    from PySide6.QtGui import QPainterPath, QRegion
+
+    def update_mask() -> None:
+        if window.isMaximized() or window.isFullScreen():
+            window.clearMask()
+            return
+        rect = QRectF(window.rect())
+        if rect.width() <= 0 or rect.height() <= 0:
+            return
+        path = QPainterPath()
+        path.addRoundedRect(rect, float(radius), float(radius))
+        window.setMask(QRegion(path.toFillPolygon().toPolygon()))
+
+    class _MaskFilter(QObject):
+        def eventFilter(self, obj, event):  # noqa: N802
+            if event.type() in (
+                QEvent.Type.Resize,
+                QEvent.Type.WindowStateChange,
+                QEvent.Type.Show,
+            ):
+                update_mask()
+            return False
+
+    filt = _MaskFilter(window)
+    window.installEventFilter(filt)
+    window._embr_mask_filter = filt  # type: ignore[attr-defined]
+    update_mask()
+
+
 def create_title_bar(window: Any, title: str) -> Any:
     """Create a custom title bar: icon+Embr | title | min/max/close.
 
@@ -247,9 +285,10 @@ def create_title_bar(window: Any, title: str) -> Any:
     from PySide6.QtCore import QEvent, QObject, Qt
     from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSizePolicy, QWidget
 
+    icon_px = EMBR_TITLE_ICON_SIZE
     bar = QWidget(window)
     bar.setObjectName("embrTitleBar")
-    bar.setFixedHeight(36)
+    bar.setFixedHeight(max(36, icon_px + 12))
     root = QHBoxLayout(bar)
     root.setContentsMargins(0, 0, 0, 0)
     root.setSpacing(0)
@@ -259,10 +298,10 @@ def create_title_bar(window: Any, title: str) -> Any:
     left_l.setContentsMargins(10, 0, 8, 0)
     left_l.setSpacing(8)
     icon = QLabel(left)
-    pix = logo_pixmap("embr-icon.svg", width=18)
+    pix = logo_pixmap("embr-icon.svg", width=icon_px)
     if not pix.isNull():
         icon.setPixmap(pix)
-    icon.setFixedSize(18, 18)
+    icon.setFixedSize(icon_px, icon_px)
     left_l.addWidget(icon, 0, Qt.AlignmentFlag.AlignVCenter)
     brand = QLabel("Embr", left)
     brand.setObjectName("embrBrand")
@@ -296,7 +335,7 @@ def create_title_bar(window: Any, title: str) -> Any:
     right_l.addWidget(btn_close)
 
     # Equal side columns keep the title optically centered.
-    side_w = 140
+    side_w = 148
     left.setFixedWidth(side_w)
     right.setFixedWidth(side_w)
     root.addWidget(left, 0)
@@ -374,6 +413,7 @@ def prepare_embr_window(window: Any, title: str) -> Any:
         | Qt.WindowType.WindowMaximizeButtonHint
     )
     apply_embr_theme(window)
+    _apply_rounded_mask(window, EMBR_WINDOW_RADIUS)
     return create_title_bar(window, title)
 
 
