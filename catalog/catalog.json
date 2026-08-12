@@ -6,15 +6,15 @@
     {
       "id": "embr",
       "name": "Embr Core",
-      "version": "0.2.11",
+      "version": "0.2.12",
       "kind": "library",
       "path": "scripts/embr",
       "min_flame": "2025.0",
-      "digest": "a978a160360e13d046595699e41261d8ba3a3130b599efb796bc07f53c9b4303",
+      "digest": "989d7dc1b14db60f9cec599ee8294ea09a7d3cf62c21d27cf6ce723792fd0f94",
       "files": [
         {
           "path": "__init__.py",
-          "sha256": "aab55dd1f253792126c2033e43840c9f6ac086cc0c01d8ce56762bcd77dbbd16"
+          "sha256": "6afd28929635ff458bacc75e37d75849ec7025ebd3c3b74a86330a22bdbb5a5b"
         },
         {
           "path": "assets/fonts/Figtree/Figtree-Bold.ttf",
@@ -74,7 +74,7 @@
         },
         {
           "path": "embr_ui.py",
-          "sha256": "d22cfcb4939755720eb05034244a075af514f96c8ff2acd59899359c8f352faf"
+          "sha256": "b09a8cbe6df21dc75e86b357e2f485d81ffd9c871acf945404a7e0760f0b6f1f"
         },
         {
           "path": "embr_version.py",
