@@ -12,7 +12,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 
 _DIR = Path(__file__).resolve().parent
 _SCRIPTS = _DIR.parent
@@ -35,6 +35,22 @@ def _open_preferences(_selection) -> None:
     import importlib
 
     _ensure_import_paths()
+
+    try:
+        from PySide6.QtWidgets import QApplication
+
+        app = QApplication.instance()
+        existing = getattr(app, "_embr_preferences", None) if app else None
+        if existing is not None:
+            try:
+                existing.show()
+                existing.raise_()
+                existing.activateWindow()
+                return
+            except RuntimeError:
+                pass
+    except Exception:
+        pass
 
     for name in list(sys.modules):
         if name.startswith("embr_pref_") or name in {
@@ -67,7 +83,7 @@ def _open_preferences(_selection) -> None:
 
 
 def get_main_menu_custom_ui_actions():
-    """Register Preferences under Main Menu → Embr.
+    """Register Preferences under Main Menu -> Embr.
 
     Import ``embr_menus`` by basename (Flame-safe). Never raise — failing hooks
     would drop the Embr submenu when combined with other Embr tools.

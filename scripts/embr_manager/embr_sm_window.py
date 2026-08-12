@@ -556,11 +556,7 @@ class ScriptManagerWindow(QDialog):
 
 
 def open_script_manager() -> None:
-    """Entry used by the Flame hook."""
-    app = QApplication.instance()
-    if app is None:
-        app = QApplication([])
-
+    """Entry used by the Flame hook (one window per QApplication)."""
     root = paths.install_root()
     # Dev convenience: use local catalog when running from the repo tree.
     catalog_path = None
@@ -573,6 +569,9 @@ def open_script_manager() -> None:
             source_root = paths.scripts_root()
 
     if not (root / "embr").is_dir():
+        app = QApplication.instance()
+        if app is None:
+            app = QApplication([])
         chosen = bootstrap.prompt_bootstrap_choice_qt()
         if chosen is None:
             return
@@ -600,13 +599,11 @@ def open_script_manager() -> None:
             QMessageBox.critical(None, "Embr Setup", str(exc))
         return
 
-    window = ScriptManagerWindow(
-        root=root,
-        catalog_path=catalog_path,
-        source_root=source_root,
-    )
-    window.show()
-    window.raise_()
-    window.activateWindow()
-    # Keep a reference so the window is not garbage-collected.
-    app._embr_script_manager = window  # type: ignore[attr-defined]
+    def _factory() -> ScriptManagerWindow:
+        return ScriptManagerWindow(
+            root=root,
+            catalog_path=catalog_path,
+            source_root=source_root,
+        )
+
+    embr_ui.show_singleton_window("_embr_script_manager", _factory)

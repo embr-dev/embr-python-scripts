@@ -13,7 +13,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-__version__ = "0.1.10"
+__version__ = "0.1.11"
 
 _DIR = Path(__file__).resolve().parent
 _SCRIPTS = _DIR.parent
@@ -36,6 +36,23 @@ def _open_manager(_selection) -> None:
     import importlib
 
     _ensure_import_paths()
+
+    # Reuse an open window before reloading modules (avoids duplicate UIs).
+    try:
+        from PySide6.QtWidgets import QApplication
+
+        app = QApplication.instance()
+        existing = getattr(app, "_embr_script_manager", None) if app else None
+        if existing is not None:
+            try:
+                existing.show()
+                existing.raise_()
+                existing.activateWindow()
+                return
+            except RuntimeError:
+                pass
+    except Exception:
+        pass
 
     # Drop stale helper modules only (keep this hook module).
     for name in list(sys.modules):
@@ -70,7 +87,7 @@ def _open_manager(_selection) -> None:
 
 
 def get_main_menu_custom_ui_actions():
-    """Register Script Manager under Main Menu → Embr.
+    """Register Script Manager under Main Menu -> Embr.
 
     Import ``embr_menus`` by basename (Flame-safe). Never raise — an empty or
     failing hook would remove the whole Embr submenu.

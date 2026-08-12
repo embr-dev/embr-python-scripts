@@ -130,7 +130,7 @@ class PreferencesWindow(QDialog):
         if self._dirty:
             reply = QMessageBox.question(
                 self,
-                "Embr Preferences",
+                "Preferences",
                 "Apply changes for the current menu before switching?",
                 QMessageBox.StandardButton.Yes
                 | QMessageBox.StandardButton.No
@@ -202,7 +202,7 @@ class PreferencesWindow(QDialog):
             )
         except menus.MenuError as exc:
             log.error(str(exc), duration=10)
-            QMessageBox.warning(self, "Embr Preferences", str(exc))
+            QMessageBox.warning(self, "Preferences", str(exc))
             return False
 
         self._dirty = False
@@ -225,7 +225,7 @@ class PreferencesWindow(QDialog):
     def _reset_all(self) -> None:
         reply = QMessageBox.question(
             self,
-            "Embr Preferences",
+            "Preferences",
             "Reset all Embr menu order and visibility to defaults?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
@@ -235,7 +235,7 @@ class PreferencesWindow(QDialog):
             menus.reset_menu_prefs(config_root=self._config_root)
         except menus.MenuError as exc:
             log.error(str(exc), duration=10)
-            QMessageBox.warning(self, "Embr Preferences", str(exc))
+            QMessageBox.warning(self, "Preferences", str(exc))
             return
         self._dirty = False
         self._load_surface(self._current_surface)
@@ -255,7 +255,7 @@ class PreferencesWindow(QDialog):
         if self._dirty:
             reply = QMessageBox.question(
                 self,
-                "Embr Preferences",
+                "Preferences",
                 "Discard unsaved menu changes?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             )
@@ -265,21 +265,11 @@ class PreferencesWindow(QDialog):
         super().closeEvent(event)
 
 
-_WINDOW: PreferencesWindow | None = None
-
-
 def open_preferences(*, config_root: Path | None = None, root: Path | None = None) -> PreferencesWindow:
-    """Show the Preferences window (singleton)."""
-    global _WINDOW
-    app = QApplication.instance()
-    if app is None:
-        app = QApplication([])
-    if _WINDOW is not None and _WINDOW.isVisible():
-        _WINDOW.raise_()
-        _WINDOW.activateWindow()
-        return _WINDOW
-    _WINDOW = PreferencesWindow(config_root=config_root or root)
-    _WINDOW.show()
-    _WINDOW.raise_()
-    _WINDOW.activateWindow()
-    return _WINDOW
+    """Show the Preferences window (one per QApplication)."""
+    cfg = config_root or root
+
+    def _factory() -> PreferencesWindow:
+        return PreferencesWindow(config_root=cfg)
+
+    return embr_ui.show_singleton_window("_embr_preferences", _factory)

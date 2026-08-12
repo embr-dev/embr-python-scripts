@@ -26,6 +26,8 @@ def main() -> None:
 
     cat = load_catalog_from_path(str(ROOT / "catalog" / "catalog.json"))
     assert cat.by_id("embr") and cat.by_id("embr_manager")
+    prefs_pkg = cat.by_id("embr_preferences")
+    assert prefs_pkg and prefs_pkg.name == "Preferences"
 
     try:
         parse_catalog({})

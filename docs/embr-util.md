@@ -58,6 +58,7 @@ hooks.refresh()  # embr を sys.modules から外してから Rescan
 | アクセント色 | Ember（`EMBR_EMBER` 等、`BRAND.md`） |
 | ウィンドウ背景 | 無彩色ダーク（`EMBR_BG` / `EMBR_SURFACE`）— Flame 標準 UI に寄せる |
 | タイトルバー | `ui.prepare_embr_window` / `ui.create_title_bar`（icon+Embr \| タイトル \| min/max/close） |
+| シングルトン窓 | `ui.show_singleton_window("_embr_…", factory)` — QApplication に保持（hooks 再読込でも多重起動しない） |
 | ロゴ | `scripts/embr/assets/logo/` |
 | Figtree (OFL) | `scripts/embr/assets/fonts/Figtree/` |
 | Material Icons (Apache-2.0) | `scripts/embr/assets/fonts/MaterialIcons/` — `ui.material_font` / タイトルバーボタン |

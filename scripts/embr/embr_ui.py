@@ -696,3 +696,42 @@ def prepare_embr_window(window: Any, title: str) -> Any:
     apply_embr_theme(window)
     _apply_rounded_mask(window, EMBR_WINDOW_RADIUS)
     return create_title_bar(window, title)
+
+
+def show_singleton_window(attr: str, factory: Any) -> Any:
+    """Show an existing QApplication-scoped window, or create one via ``factory``.
+
+    ``attr`` is stored on the ``QApplication`` instance (e.g.
+    ``"_embr_script_manager"``) so the singleton survives Flame hook module
+    reloads that clear ``sys.modules``. Closing / destroying the window clears
+    the attribute.
+    """
+    from PySide6.QtWidgets import QApplication
+
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication([])
+
+    existing = getattr(app, attr, None)
+    if existing is not None:
+        try:
+            existing.show()
+            existing.raise_()
+            existing.activateWindow()
+            return existing
+        except RuntimeError:
+            # Underlying C++ object already deleted.
+            setattr(app, attr, None)
+
+    window = factory()
+    setattr(app, attr, window)
+
+    def _clear(*_args: Any) -> None:
+        if getattr(app, attr, None) is window:
+            setattr(app, attr, None)
+
+    window.destroyed.connect(_clear)
+    window.show()
+    window.raise_()
+    window.activateWindow()
+    return window
