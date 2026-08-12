@@ -457,8 +457,10 @@ def stylesheet(*, combo_arrow_url: str | None = None) -> str:
         background-color: {EMBR_SURFACE_RAISED};
         color: {EMBR_TEXT};
         border: 1px solid {EMBR_BORDER};
-        /* Match QLineEdit vertical padding so inline rows share one height. */
-        padding: 6px 14px;
+        /* Fixed outer height with QLineEdit (border + min-height). */
+        min-height: 30px;
+        max-height: 30px;
+        padding: 0px 14px;
         border-radius: 4px;
     }}
     QPushButton:hover {{
@@ -468,8 +470,6 @@ def stylesheet(*, combo_arrow_url: str | None = None) -> str:
     QPushButton:pressed {{
         background-color: #222326;
         border-color: {EMBR_EMBER};
-        padding-top: 7px;
-        padding-bottom: 5px;
     }}
     QPushButton#embrAccent {{
         background-color: {EMBR_EMBER};
@@ -502,7 +502,10 @@ def stylesheet(*, combo_arrow_url: str | None = None) -> str:
         color: {EMBR_TEXT};
         border: 1px solid {EMBR_BORDER};
         border-radius: 4px;
-        padding: 6px 8px;
+        /* Same outer height as QPushButton (30 content + 1px border each side). */
+        min-height: 30px;
+        max-height: 30px;
+        padding: 0px 8px;
         selection-background-color: {EMBR_EMBER_DEEP};
         selection-color: {EMBR_TEXT};
     }}
