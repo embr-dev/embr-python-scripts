@@ -77,7 +77,7 @@
       "kind": "tool",
       "path": "scripts/embr_manager",
       "min_flame": "2025.0",
-      "digest": "c932067e518a66bc71ff29355bbe3801ee663df3984807226f0ec34bb2723034",
+      "digest": "4268d8f13748947d3dba3bdd8b2d3300b4e66be4a8fe703636394b78af62b739",
       "files": [
         {
           "path": "embr_manager.py",
@@ -85,7 +85,7 @@
         },
         {
           "path": "embr_sm_actions.py",
-          "sha256": "ff72e38cbb6ba5f6d88ac4bfca71860af6c9a6ef54a8289d4b5a59716fc6ca4b"
+          "sha256": "32b35c5f8cb79a3a207970c3ef4da7fd5f1cf55d818dcc4e246dfa0ff658f865"
         },
         {
           "path": "embr_sm_bootstrap.py",
@@ -93,7 +93,7 @@
         },
         {
           "path": "embr_sm_catalog.py",
-          "sha256": "f1af73a52bfbb32b11e0f1af9fb5f6adc2a68f7de5a673e79cb7bc0eccf9bd90"
+          "sha256": "2bc8d8dd68aa1a4e2dc3e2db37e6ddd7466bf1fc1b6c021acedcca34e344ca9c"
         },
         {
           "path": "embr_sm_local.py",

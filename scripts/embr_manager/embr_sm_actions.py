@@ -50,7 +50,8 @@ def _download_package_tree(
             raise ActionError(
                 f"Embr Script Manager: checksum mismatch for {package.id}/{rel} - "
                 f"expected {expected[:12]}..., got {digest[:12]}.... "
-                "Catalog may be stale; re-run gen_catalog or try Refresh."
+                "Catalog and files are out of sync (often a brief GitHub CDN lag on "
+                "the 'dev' channel). Wait a minute, Refresh, then try Update again."
             )
         target = dest / rel
         target.parent.mkdir(parents=True, exist_ok=True)

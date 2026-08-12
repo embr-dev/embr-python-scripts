@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
@@ -84,11 +85,18 @@ class Catalog:
 
 
 def catalog_url(repo: str = DEFAULT_REPO, ref: str = DEFAULT_REF) -> str:
-    return f"https://raw.githubusercontent.com/{repo}/{ref}/catalog/catalog.json"
+    # Query busts raw.githubusercontent.com CDN (often ~5 min); branch tip moves fast on dev.
+    return (
+        f"https://raw.githubusercontent.com/{repo}/{ref}/catalog/catalog.json"
+        f"?t={int(time.time())}"
+    )
 
 
 def raw_file_url(repo: str, ref: str, repo_path: str) -> str:
-    return f"https://raw.githubusercontent.com/{repo}/{ref}/{repo_path}"
+    return (
+        f"https://raw.githubusercontent.com/{repo}/{ref}/{repo_path}"
+        f"?t={int(time.time())}"
+    )
 
 
 def normalize_channel(channel: str | None) -> str:
@@ -150,7 +158,14 @@ def load_catalog_from_path(path: str) -> Catalog:
 
 
 def fetch_bytes(url: str, *, timeout: float = 30.0) -> bytes:
-    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    request = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": USER_AGENT,
+            "Cache-Control": "no-cache",
+            "Pragma": "no-cache",
+        },
+    )
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             return response.read()
