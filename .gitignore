@@ -11,3 +11,12 @@ venv/
 *.egg-info/
 .pytest_cache/
 .mypy_cache/
+
+# Third-party reference clones (e.g. PyFlame GPL) — local study only
+vendor/pyflame/
+
+# Local Script Manager state / staging under hooks root
+**/.embr/
+
+# Saved Autodesk Help HTML dumps (local reference only; processed docs live in docs/api/)
+docs/API Documentation/

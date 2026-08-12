@@ -6,7 +6,36 @@ Part of **[Embr](https://github.com/embr-dev/Embr)** — tools and community res
 
 ## Status
 
-Early setup. Scripts will live under `scripts/`. Contribution guidelines and packaging details will follow.
+Early setup. Hooks / util は `scripts/`。規約は [docs/conventions.md](./docs/conventions.md)。
+
+## Documentation
+
+| Document | Contents |
+|----------|----------|
+| [docs/prerequisites.md](./docs/prerequisites.md) | Flame 2025.0+ 向け開発前提 |
+| [docs/conventions.md](./docs/conventions.md) | スクリプト／パッケージ規約 |
+| [docs/dev-setup.md](./docs/dev-setup.md) | `DL_PYTHON_HOOK_PATH` の出典と試し方 |
+| [docs/embr-util.md](./docs/embr-util.md) | `scripts/embr` 共通 util |
+| [docs/script-manager.md](./docs/script-manager.md) | Script Manager（GitHub カタログ連携） |
+| [docs/api/](./docs/api/) | Flame Python API（hooks / module / attributes / examples） |
+| [docs/api/attributes/](./docs/api/attributes/) | Attributes（属性）原文寄り集約 |
+| [docs/pyflame-reference.md](./docs/pyflame-reference.md) | PyFlame 参照メモ（Embr 自前 util 設計用） |
+
+**Target:** Autodesk Flame Family **2025.0+**（Python 3.11 / PySide6）。PyFlame は使わず、共通機能は Embr 側で用意する。
+
+開発時の起動例:
+
+```bash
+./tools/run_flame_dev.sh
+```
+
+配布相当（チャンネル `dev` から User `python/Embr` へ）:
+
+```bash
+/opt/Autodesk/python/2025/bin/python3 tools/bootstrap_from_channel.py --channel dev
+```
+
+詳細: [docs/script-manager.md](./docs/script-manager.md)。
 
 ## Related repositories
 
