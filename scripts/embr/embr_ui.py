@@ -793,12 +793,12 @@ def style_combo(combo: Any) -> None:
             child.setFixedHeight(0)
             child.setMaximumHeight(0)
 
-    def _compact_popup_layout(popup: Any, *, inset: int = 2) -> None:
-        """Remove container spacers and keep a uniform inset inside the frame.
+    def _compact_popup_layout(popup: Any, *, inset: int = 1) -> None:
+        """Remove container spacers and keep uniform margins inside the frame.
 
-        Measured gaps to the selection were L/T=2px but R/B=0px because the
-        list was sized to ``width-2`` / ``content`` while only left/top margins
-        applied. Use the same inset on all sides.
+        The list previously filled the right/bottom, so selection sat flush on
+        those edges while L/T kept a gap. Margins alone are not enough unless
+        the view is also shrunk to leave room on every side.
         """
         from PySide6.QtWidgets import QSizePolicy
 
@@ -846,34 +846,39 @@ def style_combo(combo: Any) -> None:
             }}
             """
         )
-        inset = 2  # logical px inside the frame on each side (was L/T=2, R/B=0)
-        _compact_popup_layout(popup, inset=inset)
+        # QSS draws a 1px frame border. Layout margins sit inside that border.
+        # Want ~2px from the outer edge to the selection on every side:
+        #   outer_gap ≈ border(1) + margin(1) => margin=1, view = size-4, popup_h = content+4.
+        margin = 1
+        _compact_popup_layout(popup, inset=margin)
         target_w = max(int(combo.width()), 1)
         rows = min(int(combo.count()), int(combo.maxVisibleItems()))
         row_h = _row_height(active_view)
         content_h = row_h * max(rows, 1)
         view_h = content_h
-        popup_h = content_h + inset * 2
+        frame = 2  # left+right or top+bottom border
+        pad = margin * 2
+        popup_h = content_h + frame + pad
         fits = combo.count() <= combo.maxVisibleItems()
         active_view.setVerticalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAlwaysOff
             if fits
             else Qt.ScrollBarPolicy.ScrollBarAsNeeded
         )
-        active_view.setFixedSize(max(target_w - inset * 2, 1), view_h)
+        active_view.setFixedSize(max(target_w - frame - pad, 1), view_h)
         popup.setMinimumSize(0, 0)
         popup.setMaximumSize(16777215, 16777215)
         popup.setFixedSize(target_w, popup_h)
         if fits:
-            _compact_popup_layout(popup, inset=inset)
+            _compact_popup_layout(popup, inset=margin)
             bar = active_view.verticalScrollBar()
             guard = 0
             while bar.maximum() > 0 and guard < 8:
                 view_h += row_h
-                popup_h = view_h + inset * 2
+                popup_h = view_h + frame + pad
                 active_view.setFixedHeight(view_h)
                 popup.setFixedSize(target_w, popup_h)
-                _compact_popup_layout(popup, inset=inset)
+                _compact_popup_layout(popup, inset=margin)
                 guard += 1
 
     _orig = combo.showPopup
