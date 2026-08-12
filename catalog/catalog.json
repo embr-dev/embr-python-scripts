@@ -6,15 +6,15 @@
     {
       "id": "embr",
       "name": "Embr Core",
-      "version": "0.1.5",
+      "version": "0.1.6",
       "kind": "library",
       "path": "scripts/embr",
       "min_flame": "2025.0",
-      "digest": "9d3ce2a292f62b0d5e5272d2e291850a1888d034d2fe7a22fbd4c07cf02d1240",
+      "digest": "0b1af44e0a62d181d4ff4da16ee777efefe7839afa92156f9ab003898154e321",
       "files": [
         {
           "path": "__init__.py",
-          "sha256": "906018eecf5e601fe1b87e18f4d720c1953aba3ed722d8cd638928e81fe0cd08"
+          "sha256": "a64d0d130789dcbd45026defaefc63ce54554d08bbff19e13c7ab5451e3e85b5"
         },
         {
           "path": "assets/fonts/Figtree/Figtree-Bold.ttf",
@@ -81,15 +81,15 @@
     {
       "id": "embr_manager",
       "name": "Script Manager",
-      "version": "0.1.5",
+      "version": "0.1.6",
       "kind": "tool",
       "path": "scripts/embr_manager",
       "min_flame": "2025.0",
-      "digest": "8875defc6e8a697d078f74322a197828bbad774e352bd1e42b7c178c6f3c0de3",
+      "digest": "82ebafb34a3e43fb8f091147bd44197970215818b0f906cd1eaf79f03a60264a",
       "files": [
         {
           "path": "embr_manager.py",
-          "sha256": "f76fe14c58e0a3bfe760ec20284f764b559d3e9757fcc9e4ff1f82dfc9eef339"
+          "sha256": "51798489318be7bce96d6ef8ad865ed4632ed8b0dc2babad368f2536cd44f170"
         },
         {
           "path": "embr_sm_actions.py",
@@ -97,7 +97,7 @@
         },
         {
           "path": "embr_sm_bootstrap.py",
-          "sha256": "11a9257d3a156d36a80e5f7f952432501afc44a5bd67db97a55d24b3ae7b8bab"
+          "sha256": "5deb08cfe81b133930c6d3cbd5671ee767ae2bc31b00053d4aff5d4d8a1ecbb3"
         },
         {
           "path": "embr_sm_catalog.py",
@@ -109,7 +109,7 @@
         },
         {
           "path": "embr_sm_window.py",
-          "sha256": "d90300dfd6d5e424e6f1350d9ba0589089044bb71e0e9dae2c7ffaa1b42d79a4"
+          "sha256": "6128a511bd6b3b88d1e1015c1fb4eaf325cf4270955e57181ace21074f7a50a0"
         }
       ],
       "depends": [

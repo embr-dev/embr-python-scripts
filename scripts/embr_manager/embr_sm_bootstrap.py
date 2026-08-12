@@ -20,6 +20,8 @@ class BootstrapError(RuntimeError):
 
 
 BOOTSTRAP_PACKAGES = ("embr", "embr_manager")
+# Install / Update runs these first (in order), then Rescan, then other packages.
+CORE_PACKAGE_ORDER = BOOTSTRAP_PACKAGES
 
 
 def candidate_roots() -> list[tuple[str, Path]]:

@@ -372,6 +372,48 @@ class ScriptManagerWindow(QDialog):
     def _selected_ids(self) -> list[str]:
         return [r["id"] for r in self._selected_rows()]
 
+    def _partition_install_work(
+        self, work: list[dict[str, str]]
+    ) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+        """Split into Core/Script Manager (ordered) and remaining packages."""
+        by_id = {row["id"]: row for row in work}
+        core: list[dict[str, str]] = []
+        for pkg_id in bootstrap.CORE_PACKAGE_ORDER:
+            row = by_id.get(pkg_id)
+            if row is not None:
+                core.append(row)
+        core_ids = {row["id"] for row in core}
+        others = [row for row in work if row["id"] not in core_ids]
+        return core, others
+
+    def _install_or_update_row(self, row: dict[str, str]) -> None:
+        assert self._catalog is not None
+        if row["status"] == local.STATUS_NOT_INSTALLED:
+            actions.install_package(
+                self._catalog,
+                row["id"],
+                self._root,
+                source_root=self._source_root,
+            )
+        else:
+            actions.update_package(
+                self._catalog,
+                row["id"],
+                self._root,
+                source_root=self._source_root,
+            )
+
+    def _rescan_python_hooks(self) -> bool:
+        """Invalidate Embr modules and run Flame Rescan. Return True on success."""
+        self._set_busy(True, "Rescanning Python Hooks…")
+        try:
+            import embr_hooks as hooks
+
+            hooks.refresh(invalidate=("embr", "embr_manager"))
+            return True
+        except Exception:
+            return False
+
     def _run_install_or_update(self) -> None:
         if self._catalog is None:
             self.refresh()
@@ -390,34 +432,30 @@ class ScriptManagerWindow(QDialog):
         if not work:
             return
 
+        core, others = self._partition_install_work(work)
+        rescanned = False
         try:
-            total = len(work)
-            for i, row in enumerate(work, start=1):
-                pkg_id = row["id"]
-                status = row["status"]
-                verb = (
-                    "Installing"
-                    if status == local.STATUS_NOT_INSTALLED
-                    else "Updating"
-                )
-                self._set_busy(
-                    True,
-                    f"{verb} {row['name']} ({i}/{total})…",
-                )
-                if status == local.STATUS_NOT_INSTALLED:
-                    actions.install_package(
-                        self._catalog,
-                        pkg_id,
-                        self._root,
-                        source_root=self._source_root,
+            phases = (("core", core), ("other", others))
+            for phase_name, rows in phases:
+                if not rows:
+                    continue
+                total = len(rows)
+                for i, row in enumerate(rows, start=1):
+                    verb = (
+                        "Installing"
+                        if row["status"] == local.STATUS_NOT_INSTALLED
+                        else "Updating"
                     )
+                    self._set_busy(
+                        True,
+                        f"{verb} {row['name']} ({i}/{total})…",
+                    )
+                    self._install_or_update_row(row)
+                if self._rescan_python_hooks():
+                    rescanned = True
                 else:
-                    actions.update_package(
-                        self._catalog,
-                        pkg_id,
-                        self._root,
-                        source_root=self._source_root,
-                    )
+                    # Continue installing remaining packages; warn at the end.
+                    pass
         except (actions.ActionError, CatalogError) as exc:
             self._set_busy(False)
             self._alert(str(exc))
@@ -429,7 +467,7 @@ class ScriptManagerWindow(QDialog):
             self._alert(msg)
             self._set_status("Install / Update failed. Try Repair or Refresh.")
             return
-        self._after_action("Install / Update")
+        self._after_action("Install / Update", already_rescanned=rescanned)
 
     def _run_action(self, action: str) -> None:
         if self._catalog is None:
@@ -495,10 +533,15 @@ class ScriptManagerWindow(QDialog):
 
         self._after_action(label)
 
-    def _after_action(self, action: str) -> None:
+    def _after_action(self, action: str, *, already_rescanned: bool = False) -> None:
         self._set_busy(False)
         self.refresh()
         done = f"{action} finished."
+        if already_rescanned:
+            self._set_status(f"{done} {self._idle_status()}")
+            self.raise_()
+            self.activateWindow()
+            return
         try:
             import embr_hooks as hooks
 

@@ -35,6 +35,17 @@ GitHub 上のカタログを正とし、ローカルの Embr インストール�
 
 Shared に書けない場合は権限昇格せず、英語で理由と対処（User へ切替 or 管理者）を出す。
 
+### Install / Update の順序
+
+選択に Core / Script Manager とその他が混在する場合:
+
+1. **Embr Core** → **Script Manager**（この順）  
+2. **Rescan Python Hooks**  
+3. その他のパッケージ  
+4. **Rescan Python Hooks**
+
+Core / Script Manager のみ、またはその他のみのときは、当該フェーズのあと Rescan を1回。
+
 ---
 
 ## チャンネル（stable / latest / dev）
