@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QMessageBox,
     QPushButton,
+    QSizePolicy,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -130,8 +131,11 @@ class ScriptManagerWindow(QDialog):
             self._btn_uninstall,
         ):
             btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-            buttons.addWidget(btn)
+        buttons.addWidget(self._btn_refresh)
         buttons.addStretch(1)
+        buttons.addWidget(self._btn_install_update)
+        buttons.addWidget(self._btn_repair)
+        buttons.addWidget(self._btn_uninstall)
         body.addLayout(buttons)
 
         layout.addLayout(body)
@@ -139,9 +143,15 @@ class ScriptManagerWindow(QDialog):
         self._status = QLabel()
         self._status.setObjectName("embrStatus")
         self._status.setWordWrap(False)
+        self._status.setMinimumWidth(0)
+        self._status.setSizePolicy(
+            QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred
+        )
+        self._status.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         layout.addWidget(self._status)
 
         self.resize(780, 480)
+        self._normal_size = self.size()
 
         self._btn_refresh.clicked.connect(self.refresh)
         self._btn_install_update.clicked.connect(self._run_install_or_update)
@@ -151,11 +161,31 @@ class ScriptManagerWindow(QDialog):
 
         font_err = embr_ui.font_load_error()
         if font_err:
-            self._status.setText(font_err)
+            self._set_status(font_err)
 
         self._persist_channel()
         self._update_root_label()
         self.refresh()
+
+    def _set_status(self, text: str) -> None:
+        """Set status text without letting long messages widen the window."""
+        self._status.setText(text)
+        # Re-assert ignored horizontal policy after text changes on some styles.
+        self._status.setMinimumWidth(0)
+
+    def _alert(self, text: str, *, critical: bool = True) -> None:
+        """Show a modal alert without resizing this frameless window."""
+        geo = self.geometry()
+        box = QMessageBox(None)
+        box.setIcon(
+            QMessageBox.Icon.Critical if critical else QMessageBox.Icon.Information
+        )
+        box.setWindowTitle("Embr Script Manager")
+        box.setText(text)
+        box.setStandardButtons(QMessageBox.StandardButton.Ok)
+        box.exec()
+        if not self.isMaximized():
+            self.setGeometry(geo)
 
     def _persist_channel(self) -> None:
         local.set_channel(self._root, self._channel)
@@ -211,14 +241,14 @@ class ScriptManagerWindow(QDialog):
             self._catalog = self._load_catalog()
             rows = actions.build_status_rows(self._catalog, self._root)
         except CatalogError as exc:
-            QMessageBox.critical(self, "Embr Script Manager", str(exc))
-            self._status.setText(str(exc))
+            self._alert(str(exc))
+            self._set_status(str(exc))
             self._update_action_buttons()
             return
         except Exception as exc:
             msg = f"Embr Script Manager: refresh failed - {exc}"
-            QMessageBox.critical(self, "Embr Script Manager", msg)
-            self._status.setText(msg)
+            self._alert(msg)
+            self._set_status(msg)
             self._update_action_buttons()
             return
 
@@ -243,7 +273,7 @@ class ScriptManagerWindow(QDialog):
             if self._catalog_path is not None
             else f"channel:{self._channel}"
         )
-        self._status.setText(
+        self._set_status(
             f"{src} · {self._catalog.repo}@{self._catalog.ref} — "
             f"{len(rows)} package(s)"
         )
@@ -279,13 +309,13 @@ class ScriptManagerWindow(QDialog):
                         source_root=self._source_root,
                     )
         except (actions.ActionError, CatalogError) as exc:
-            QMessageBox.critical(self, "Embr Script Manager", str(exc))
-            self._status.setText(str(exc))
+            self._alert(str(exc))
+            self._set_status(str(exc))
             return
         except Exception as exc:
             msg = f"Embr Script Manager: install/update failed - {exc}"
-            QMessageBox.critical(self, "Embr Script Manager", msg)
-            self._status.setText(msg)
+            self._alert(msg)
+            self._set_status(msg)
             return
         self._after_action("install/update")
 
@@ -299,11 +329,14 @@ class ScriptManagerWindow(QDialog):
             return
 
         if action == "uninstall":
+            geo = self.geometry()
             answer = QMessageBox.question(
-                self,
+                None,
                 "Embr Script Manager",
                 f"Uninstall {', '.join(ids)} from:\n{self._root} ?",
             )
+            if not self.isMaximized():
+                self.setGeometry(geo)
             if answer != QMessageBox.StandardButton.Yes:
                 return
 
@@ -319,26 +352,26 @@ class ScriptManagerWindow(QDialog):
                 elif action == "uninstall":
                     actions.uninstall_package(self._catalog, pkg_id, self._root)
         except (actions.ActionError, CatalogError) as exc:
-            QMessageBox.critical(self, "Embr Script Manager", str(exc))
-            self._status.setText(str(exc))
+            self._alert(str(exc))
+            self._set_status(str(exc))
             return
         except Exception as exc:
             msg = f"Embr Script Manager: {action} failed - {exc}"
-            QMessageBox.critical(self, "Embr Script Manager", msg)
-            self._status.setText(msg)
+            self._alert(msg)
+            self._set_status(msg)
             return
 
         self._after_action(action)
 
     def _after_action(self, action: str) -> None:
         self.refresh()
-        self._status.setText(f"{action} completed")
+        self._set_status(f"{action} completed")
         try:
             import embr_hooks as hooks
 
             hooks.refresh(invalidate=("embr", "embr_manager"))
         except Exception:
-            self._status.setText(
+            self._set_status(
                 f"{action} completed — run Rescan Python Hooks if menus did not update"
             )
 

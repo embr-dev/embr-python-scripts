@@ -45,7 +45,7 @@ hooks.refresh()  # embr を sys.modules から外してから Rescan
 | タイトルバー | `ui.prepare_embr_window` / `ui.create_title_bar`（icon+Embr \| タイトル \| min/max/close） |
 | ロゴ | `scripts/embr/assets/logo/` |
 | Figtree (OFL) | `scripts/embr/assets/fonts/Figtree/` |
-| UI アイコン | **Material Icons / Material Symbols**（下記） |
+| Material Icons (Apache-2.0) | `scripts/embr/assets/fonts/MaterialIcons/` — `ui.material_font` / タイトルバーボタン |
 
 Satoshi はランタイムで使わない。UI は必ず `embr.ui` 経由。
 

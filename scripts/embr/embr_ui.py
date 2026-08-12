@@ -37,6 +37,16 @@ _FONT_LOADED = False
 _FONT_FAMILY = "Figtree"
 _FONT_LOAD_ERROR: str | None = None
 
+_MATERIAL_LOADED = False
+_MATERIAL_FAMILY = "Material Icons"
+_MATERIAL_LOAD_ERROR: str | None = None
+
+# Material Icons ligature names (MaterialIcons-Regular.ttf)
+ICON_MINIMIZE = "minimize"
+ICON_MAXIMIZE = "crop_square"
+ICON_RESTORE = "filter_none"
+ICON_CLOSE = "close"
+
 
 def assets_dir() -> Path:
     """Return ``scripts/embr/assets``."""
@@ -46,6 +56,11 @@ def assets_dir() -> Path:
 def fonts_dir() -> Path:
     """Return the bundled Figtree directory."""
     return assets_dir() / "fonts" / "Figtree"
+
+
+def material_icons_dir() -> Path:
+    """Return the bundled Material Icons directory."""
+    return assets_dir() / "fonts" / "MaterialIcons"
 
 
 def logo_path(name: str = "embr-mark.svg") -> Path:
@@ -105,6 +120,54 @@ def embr_font(point_size: int = 12, *, bold: bool = False) -> Any:
     return font
 
 
+def _ensure_material_icons_loaded() -> str:
+    """Load bundled Material Icons and return the family name."""
+    global _MATERIAL_LOADED, _MATERIAL_FAMILY, _MATERIAL_LOAD_ERROR
+    if _MATERIAL_LOADED:
+        return _MATERIAL_FAMILY
+
+    try:
+        from PySide6.QtGui import QFontDatabase
+    except ImportError as exc:
+        _MATERIAL_LOAD_ERROR = f"Embr UI: PySide6 unavailable - {exc}"
+        _MATERIAL_LOADED = True
+        _MATERIAL_FAMILY = "Sans Serif"
+        return _MATERIAL_FAMILY
+
+    path = material_icons_dir() / "MaterialIcons-Regular.ttf"
+    font_id = QFontDatabase.addApplicationFont(str(path)) if path.is_file() else -1
+    families: list[str] = []
+    if font_id != -1:
+        families.extend(QFontDatabase.applicationFontFamilies(font_id))
+
+    if families:
+        _MATERIAL_FAMILY = families[0]
+        _MATERIAL_LOAD_ERROR = None
+    else:
+        _MATERIAL_FAMILY = "Sans Serif"
+        _MATERIAL_LOAD_ERROR = (
+            f"Embr UI: failed to load Material Icons from {path}. "
+            "Window chrome falls back to text glyphs."
+        )
+    _MATERIAL_LOADED = True
+    return _MATERIAL_FAMILY
+
+
+def material_font(point_size: int = 18) -> Any:
+    """Return a ``QFont`` for Material Icons ligatures."""
+    from PySide6.QtGui import QFont
+
+    font = QFont(_ensure_material_icons_loaded(), point_size)
+    font.setStyleStrategy(QFont.StyleStrategy.PreferDefault)
+    return font
+
+
+def material_icon_text(name: str) -> str:
+    """Return the ligature string for a Material Icon name (e.g. ``close``)."""
+    _ensure_material_icons_loaded()
+    return name
+
+
 def logo_pixmap(name: str = "embr-mark.svg", width: int = 120) -> Any:
     """Load a logo as ``QPixmap`` (SVG via ``QSvgRenderer`` when needed)."""
     from PySide6.QtCore import QSize, Qt
@@ -153,8 +216,12 @@ def stylesheet() -> str:
         border: none;
         outline: none;
     }}
-    QPushButton:focus, QComboBox:focus, QTableWidget:focus, QHeaderView:focus {{
+    QPushButton:focus, QComboBox:focus, QAbstractItemView:focus,
+    QTableWidget:focus, QHeaderView:focus, QTableWidget::item:focus {{
         outline: none;
+    }}
+    QTableWidget::item:focus {{
+        border: none;
     }}
     QLabel#embrStatus {{
         background-color: {EMBR_SURFACE};
@@ -187,6 +254,28 @@ def stylesheet() -> str:
         color: {EMBR_MUTED};
         font-size: 12px;
     }}
+    QComboBox {{
+        background-color: {EMBR_SURFACE_RAISED};
+        color: {EMBR_TEXT};
+        border: 1px solid {EMBR_BORDER};
+        padding: 4px 8px;
+        border-radius: 4px;
+        min-width: 96px;
+    }}
+    QComboBox:hover {{
+        background-color: #3C3E43;
+    }}
+    QComboBox::drop-down {{
+        border: none;
+        width: 20px;
+    }}
+    QComboBox QAbstractItemView {{
+        background-color: {EMBR_SURFACE};
+        color: {EMBR_TEXT};
+        selection-background-color: {EMBR_EMBER_DEEP};
+        border: 1px solid {EMBR_BORDER};
+        outline: none;
+    }}
     QPushButton#embrWinBtn, QPushButton#embrWinClose {{
         background-color: transparent;
         color: {EMBR_TEXT};
@@ -200,8 +289,15 @@ def stylesheet() -> str:
     QPushButton#embrWinBtn:hover {{
         background-color: {EMBR_SURFACE_RAISED};
     }}
+    QPushButton#embrWinBtn:pressed {{
+        background-color: #3C3E43;
+    }}
     QPushButton#embrWinClose:hover {{
         background-color: #C42B2B;
+        color: #FFFFFF;
+    }}
+    QPushButton#embrWinClose:pressed {{
+        background-color: #A02020;
         color: #FFFFFF;
     }}
     QTableWidget {{
@@ -211,6 +307,7 @@ def stylesheet() -> str:
         selection-background-color: {EMBR_EMBER_DEEP};
         selection-color: {EMBR_TEXT};
         border: 1px solid {EMBR_BORDER};
+        outline: none;
     }}
     QHeaderView::section {{
         background-color: {EMBR_SURFACE_RAISED};
@@ -229,36 +326,64 @@ def stylesheet() -> str:
     }}
     QPushButton:hover {{
         background-color: #3C3E43;
+        border-color: #6A6C70;
+    }}
+    QPushButton:pressed {{
+        background-color: #222326;
+        border-color: {EMBR_EMBER};
+        padding-top: 9px;
+        padding-bottom: 7px;
     }}
     QPushButton#embrAccent {{
         background-color: {EMBR_EMBER};
         color: #1A1A1A;
         font-weight: 600;
-        border: none;
+        border: 1px solid {EMBR_EMBER_DEEP};
     }}
     QPushButton#embrAccent:hover {{
         background-color: {EMBR_EMBER_BRIGHT};
+        border-color: {EMBR_EMBER};
+    }}
+    QPushButton#embrAccent:pressed {{
+        background-color: {EMBR_EMBER_DEEP};
+        border-color: #8A4008;
+        color: #FFFFFF;
     }}
     QPushButton:disabled {{
         background-color: {EMBR_SURFACE};
-        color: #6E7074;
-        border-color: {EMBR_BORDER};
+        color: #5C5E62;
+        border-color: #3A3C40;
     }}
-    QStatusBar {{
-        background-color: {EMBR_SURFACE};
-        color: {EMBR_MUTED};
-        border-top: 1px solid {EMBR_BORDER};
-    }}
-    QStatusBar::item {{
-        border: none;
+    QPushButton#embrAccent:disabled {{
+        background-color: #3A342E;
+        color: #6E655C;
+        border-color: #4A433C;
+        font-weight: 600;
     }}
     """
 
 
+def apply_no_focus_rect(widget: Any) -> None:
+    """Suppress Qt's dotted focus rectangle on ``widget`` and descendants."""
+    from PySide6.QtWidgets import QProxyStyle, QStyle
+
+    class _NoFocusStyle(QProxyStyle):
+        def drawPrimitive(self, element, option, painter, widget=None):  # noqa: N802
+            if element == QStyle.PrimitiveElement.PE_FrameFocusRect:
+                return
+            super().drawPrimitive(element, option, painter, widget)
+
+    style = _NoFocusStyle(widget.style())
+    widget.setStyle(style)
+    widget._embr_no_focus_style = style  # type: ignore[attr-defined]
+
+
 def apply_embr_theme(widget: Any) -> None:
     """Apply Embr colors and Figtree to a Qt widget (typically a window)."""
+    _ensure_material_icons_loaded()
     widget.setStyleSheet(stylesheet())
     widget.setFont(embr_font(12))
+    apply_no_focus_rect(widget)
 
 
 def _apply_rounded_mask(window: Any, radius: int = EMBR_WINDOW_RADIUS) -> None:
@@ -336,16 +461,18 @@ def create_title_bar(window: Any, title: str) -> Any:
     right_l.setSpacing(0)
     right_l.addStretch(1)
 
-    def _win_btn(text: str, object_name: str) -> QPushButton:
-        btn = QPushButton(text, right)
+    def _win_btn(icon_name: str, object_name: str) -> QPushButton:
+        btn = QPushButton(material_icon_text(icon_name), right)
         btn.setObjectName(object_name)
+        btn.setFont(material_font(18))
         btn.setCursor(Qt.CursorShape.ArrowCursor)
         btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        btn.setToolTip(icon_name.replace("_", " "))
         return btn
 
-    btn_min = _win_btn("–", "embrWinBtn")
-    btn_max = _win_btn("□", "embrWinBtn")
-    btn_close = _win_btn("×", "embrWinClose")
+    btn_min = _win_btn(ICON_MINIMIZE, "embrWinBtn")
+    btn_max = _win_btn(ICON_MAXIMIZE, "embrWinBtn")
+    btn_close = _win_btn(ICON_CLOSE, "embrWinClose")
     right_l.addWidget(btn_min)
     right_l.addWidget(btn_max)
     right_l.addWidget(btn_close)
@@ -367,10 +494,10 @@ def create_title_bar(window: Any, title: str) -> Any:
     def _toggle_max() -> None:
         if window.isMaximized():
             window.showNormal()
-            btn_max.setText("□")
+            btn_max.setText(material_icon_text(ICON_MAXIMIZE))
         else:
             window.showMaximized()
-            btn_max.setText("❐")
+            btn_max.setText(material_icon_text(ICON_RESTORE))
 
     def _close() -> None:
         window.close()

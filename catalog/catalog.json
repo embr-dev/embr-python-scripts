@@ -6,15 +6,15 @@
     {
       "id": "embr",
       "name": "Embr Core",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "kind": "library",
       "path": "scripts/embr",
       "min_flame": "2025.0",
-      "digest": "6c70a9de1c7bbf62e30a3a6ef8bbaf8b794759e6153da8bf208d76136fc29055",
+      "digest": "bd378c85e3583a2f08033c2690a9ffcec206e4c543b48884c3db2d34b4d82e81",
       "files": [
         {
           "path": "__init__.py",
-          "sha256": "a2c4a1e9815e7e82e280d9f409ea6fdef10f48584b6055c834adb9c461a6c3dc"
+          "sha256": "321f84d414ca7516de80b53518aff94b39bf8480c462a777057d695ce175c9c5"
         },
         {
           "path": "assets/fonts/Figtree/Figtree-Bold.ttf",
@@ -35,6 +35,14 @@
         {
           "path": "assets/fonts/Figtree/OFL.txt",
           "sha256": "140d37233e7f3ce7313798befa9600893bcceaf41a55fa0fa5ad52f7f657a268"
+        },
+        {
+          "path": "assets/fonts/MaterialIcons/LICENSE.txt",
+          "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd"
+        },
+        {
+          "path": "assets/fonts/MaterialIcons/MaterialIcons-Regular.ttf",
+          "sha256": "ef149f08bdd2ff09a4e2c8573476b7b0f3fbb15b623954ade59899e7175bedda"
         },
         {
           "path": "assets/logo/embr-icon.svg",
@@ -62,7 +70,7 @@
         },
         {
           "path": "embr_ui.py",
-          "sha256": "63119437b6e4aa06a113c53d24f153a4ae4993649fdbf296b8e60a2fe6e65dbb"
+          "sha256": "4cdc095ace0f7f13c96ea1cc137376a3754932fddd970105cded9f275249eb54"
         },
         {
           "path": "embr_version.py",
@@ -73,15 +81,15 @@
     {
       "id": "embr_manager",
       "name": "Script Manager",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "kind": "tool",
       "path": "scripts/embr_manager",
       "min_flame": "2025.0",
-      "digest": "d733b4dc7a2a90633f95733946643f26ccc918e3ef81facec5a0665b65058971",
+      "digest": "c4311da5ae4a8f9b626f5359f7d7320690464a25b92bdd2c22b541a98c4d1d17",
       "files": [
         {
           "path": "embr_manager.py",
-          "sha256": "aef26702891708ae9e0df15b73ccf7358d70d47cf902cc0b45f71d6028386561"
+          "sha256": "ae32197315f6d9311ed6cb39df46620b90203f1dfec61b1eacc1d12b21bd2df4"
         },
         {
           "path": "embr_sm_actions.py",
@@ -101,7 +109,7 @@
         },
         {
           "path": "embr_sm_window.py",
-          "sha256": "c7ec6871ec8a97433e363fbd471e3c0165f6b7c3538fac169e92a282b0edb2b5"
+          "sha256": "1ebcc7c99f0fd22485cd1e23bb4d8b231f53db372400e0b2056955cdc8c7b4ca"
         }
       ],
       "depends": [
