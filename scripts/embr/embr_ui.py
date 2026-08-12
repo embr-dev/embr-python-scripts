@@ -777,6 +777,21 @@ def style_combo(combo: Any) -> None:
         fm_h = int(combo.fontMetrics().height())
         return max(hint, fm_h + 14, 28)
 
+    def _hide_combo_scrollers(popup: Any) -> None:
+        # QComboBoxPrivateScroller draws the up/down chevrons when the list
+        # thinks it overflows. Hide them once the viewport fits the items.
+        from PySide6.QtWidgets import QWidget
+
+        for child in popup.findChildren(QWidget):
+            try:
+                name = child.metaObject().className()
+            except Exception:
+                continue
+            if name != "QComboBoxPrivateScroller":
+                continue
+            child.hide()
+            child.setFixedHeight(0)
+
     def _fit_popup() -> None:
         popup = view.window()
         if popup is None or popup is combo:
@@ -793,20 +808,34 @@ def style_combo(combo: Any) -> None:
         )
         target_w = max(int(combo.width()), 1)
         rows = min(int(combo.count()), int(combo.maxVisibleItems()))
-        target_h = _row_height() * max(rows, 1) + 6
+        row_h = _row_height()
+        content_h = row_h * max(rows, 1)
+        # QSS padding on the list (2px top + bottom).
+        view_h = content_h + 4
+        # Outer frame border (1px top + bottom).
+        popup_h = view_h + 2
         fits = combo.count() <= combo.maxVisibleItems()
         view.setVerticalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAlwaysOff
             if fits
             else Qt.ScrollBarPolicy.ScrollBarAsNeeded
         )
-        view.setFixedWidth(max(target_w - 2, 1))  # inset for the frame border
-        view.setMinimumHeight(0)
-        view.setMaximumHeight(16777215)
+        view.setFixedSize(max(target_w - 2, 1), view_h)
         popup.setMinimumSize(0, 0)
         popup.setMaximumSize(16777215, 16777215)
-        popup.resize(target_w, target_h)
-        popup.setFixedSize(target_w, target_h)
+        popup.setFixedSize(target_w, popup_h)
+        if fits:
+            _hide_combo_scrollers(popup)
+            # If anything still overflows, grow until the scroll range clears.
+            bar = view.verticalScrollBar()
+            guard = 0
+            while bar.maximum() > 0 and guard < 8:
+                view_h += row_h
+                popup_h = view_h + 2
+                view.setFixedHeight(view_h)
+                popup.setFixedSize(target_w, popup_h)
+                _hide_combo_scrollers(popup)
+                guard += 1
 
     _orig = combo.showPopup
 
