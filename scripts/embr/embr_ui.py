@@ -24,7 +24,7 @@ EMBR_TEXT = "#E8E8E8"
 EMBR_MUTED = "#9B9DA1"
 
 # Frameless window chrome
-EMBR_WINDOW_RADIUS = 8
+EMBR_WINDOW_RADIUS = 5
 EMBR_TITLE_ICON_SIZE = 24
 EMBR_TITLE_CTRL_ICON_SIZE = 16
 EMBR_TITLE_BRAND_PT = 17
@@ -329,6 +329,8 @@ def stylesheet(*, combo_arrow_url: str | None = None) -> str:
         background-color: {EMBR_SURFACE};
         color: {EMBR_MUTED};
         border-top: 1px solid {EMBR_BORDER};
+        border-bottom-left-radius: {EMBR_WINDOW_RADIUS}px;
+        border-bottom-right-radius: {EMBR_WINDOW_RADIUS}px;
         padding: 6px 12px;
         font-size: 12px;
     }}
@@ -371,13 +373,52 @@ def stylesheet(*, combo_arrow_url: str | None = None) -> str:
     QComboBox:hover {{
         background-color: #3C3E43;
     }}
+    QComboBox:disabled {{
+        color: #5C5E62;
+        border-color: #3A3C40;
+    }}
     {arrow_rule}
     QComboBox QAbstractItemView {{
         background-color: {EMBR_SURFACE};
         color: {EMBR_TEXT};
         selection-background-color: {EMBR_EMBER_DEEP};
+        selection-color: {EMBR_TEXT};
         border: 1px solid {EMBR_BORDER};
         outline: none;
+        padding: 2px;
+    }}
+    QComboBox QAbstractItemView::item {{
+        padding: 6px 8px;
+        min-height: 22px;
+        border-radius: 3px;
+    }}
+    QComboBox QAbstractItemView::item:selected {{
+        background-color: {EMBR_EMBER_DEEP};
+        color: {EMBR_TEXT};
+    }}
+    QComboBox QAbstractItemView::item:hover {{
+        background-color: {EMBR_SURFACE_RAISED};
+        color: {EMBR_TEXT};
+    }}
+    QListView#embrComboPopup {{
+        background-color: {EMBR_SURFACE};
+        color: {EMBR_TEXT};
+        border: 1px solid {EMBR_BORDER};
+        outline: none;
+        padding: 2px;
+    }}
+    QListView#embrComboPopup::item {{
+        padding: 6px 8px;
+        min-height: 22px;
+        border-radius: 3px;
+    }}
+    QListView#embrComboPopup::item:selected {{
+        background-color: {EMBR_EMBER_DEEP};
+        color: {EMBR_TEXT};
+    }}
+    QListView#embrComboPopup::item:hover {{
+        background-color: {EMBR_SURFACE_RAISED};
+        color: {EMBR_TEXT};
     }}
     QPushButton#embrWinBtn, QPushButton#embrWinClose {{
         background-color: transparent;
@@ -390,6 +431,9 @@ def stylesheet(*, combo_arrow_url: str | None = None) -> str:
         min-height: 36px;
         max-height: 36px;
         border-radius: 0;
+    }}
+    QPushButton#embrWinClose {{
+        border-top-right-radius: {EMBR_WINDOW_RADIUS}px;
     }}
     QPushButton#embrWinBtn:hover {{
         background-color: {EMBR_SURFACE_RAISED};
@@ -609,8 +653,9 @@ def apply_embr_theme(widget: Any) -> None:
 def _apply_rounded_mask(window: Any, radius: int = EMBR_WINDOW_RADIUS) -> None:
     """Clip a frameless window to a rounded rectangle (including children).
 
-    Uses a painted ``QBitmap`` mask instead of ``QPainterPath.toFillPolygon``,
-    which approximates curves with few segments and looks chamfered at small R.
+    ``QWidget.setMask`` uses *logical* widget coordinates. Building a
+    device-pixel ``QBitmap`` (size × DPR) made the mask ~2× too large on
+    Retina, so only the top-left corner appeared rounded.
     """
     from PySide6.QtCore import QEvent, QObject, Qt
     from PySide6.QtGui import QBitmap, QPainter
@@ -622,26 +667,14 @@ def _apply_rounded_mask(window: Any, radius: int = EMBR_WINDOW_RADIUS) -> None:
         rect = window.rect()
         if rect.width() <= 0 or rect.height() <= 0:
             return
-        dpr = float(getattr(window, "devicePixelRatioF", lambda: 1.0)())
-        w = max(1, int(round(rect.width() * dpr)))
-        h = max(1, int(round(rect.height() * dpr)))
-        bmp = QBitmap(w, h)
-        bmp.setDevicePixelRatio(dpr)
+        # Logical size only — do not multiply by devicePixelRatio.
+        bmp = QBitmap(rect.size())
         bmp.fill(Qt.GlobalColor.color0)
         painter = QPainter(bmp)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(Qt.GlobalColor.color1)
-        # Inset by half a device pixel so the edge is not clipped harshly.
-        inset = 0.5 / dpr if dpr else 0.5
-        painter.drawRoundedRect(
-            inset,
-            inset,
-            float(rect.width()) - inset * 2.0,
-            float(rect.height()) - inset * 2.0,
-            float(radius),
-            float(radius),
-        )
+        painter.drawRoundedRect(0, 0, rect.width(), rect.height(), radius, radius)
         painter.end()
         window.setMask(bmp)
 
@@ -664,6 +697,56 @@ def _apply_rounded_mask(window: Any, radius: int = EMBR_WINDOW_RADIUS) -> None:
     window.installEventFilter(filt)
     window._embr_mask_filter = filt  # type: ignore[attr-defined]
     update_mask()
+
+
+def style_combo(combo: Any) -> None:
+    """Force Embr styling on a combo popup (avoids native/Fusion blue chrome)."""
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QListView
+
+    if getattr(combo, "_embr_combo_styled", False):
+        return
+    view = QListView(combo)
+    view.setObjectName("embrComboPopup")
+    view.setMouseTracking(True)
+    view.setFrameShape(QListView.Shape.NoFrame)
+    combo.setView(view)
+    combo.setMaxVisibleItems(12)
+    try:
+        combo.setAttribute(Qt.WidgetAttribute.WA_MacShowFocusRect, False)
+    except Exception:
+        pass
+    # Popup is a separate top-level window; style it when first shown.
+    def _on_show_popup() -> None:
+        popup = view.window()
+        if popup is None or popup is combo:
+            return
+        popup.setStyleSheet(
+            f"""
+            QFrame {{
+                background-color: {EMBR_SURFACE};
+                border: 1px solid {EMBR_BORDER};
+            }}
+            """
+        )
+
+    combo._embr_combo_styled = True  # type: ignore[attr-defined]
+    # showPopup is a method — wrap once
+    _orig = combo.showPopup
+
+    def _show() -> None:
+        _orig()
+        _on_show_popup()
+
+    combo.showPopup = _show  # type: ignore[method-assign]
+
+
+def polish_embr_widgets(root: Any) -> None:
+    """Apply late widget polish (call after building the window tree)."""
+    from PySide6.QtWidgets import QComboBox
+
+    for combo in root.findChildren(QComboBox):
+        style_combo(combo)
 
 
 def create_title_bar(window: Any, title: str) -> Any:
@@ -860,6 +943,7 @@ def show_singleton_window(attr: str, factory: Any) -> Any:
             setattr(app, attr, None)
 
     window = factory()
+    polish_embr_widgets(window)
     setattr(app, attr, window)
 
     def _clear(*_args: Any) -> None:
