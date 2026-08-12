@@ -143,7 +143,8 @@ def stylesheet() -> str:
     }}
     QMainWindow, QDialog {{
         background-color: {EMBR_BG};
-        border: 1px solid {EMBR_BORDER};
+        border: none;
+        outline: none;
     }}
     QWidget#embrTitleBar {{
         background-color: {EMBR_SURFACE};

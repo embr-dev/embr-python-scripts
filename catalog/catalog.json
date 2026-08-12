@@ -10,7 +10,7 @@
       "kind": "library",
       "path": "scripts/embr",
       "min_flame": "2025.0",
-      "digest": "ebc49f96686138cad4cc60a4a5351e330ea44f833e13444f157562fa57d38ad2",
+      "digest": "e89ba35e1d6f438f14c417f1ca77add7cdd58c0014d93ab864398785469d8fa2",
       "files": [
         {
           "path": "__init__.py",
@@ -62,7 +62,7 @@
         },
         {
           "path": "embr_ui.py",
-          "sha256": "3624f2f38d7904b69d54ddde0af27468e5fb1a9ddeb17fc679f85fcceb94d675"
+          "sha256": "7323c03d6c3a26b0b971398c71a652f74cbd04d25d42455bf298c7b3f7893f7e"
         },
         {
           "path": "embr_version.py",
