@@ -21,14 +21,9 @@ def main() -> None:
 
     defaults = menus.load_defaults()
     assert "surfaces" in defaults
-    assert any(
-        e["id"] == "script_manager"
-        for e in defaults["surfaces"]["main_menu"]
-    )
-    assert any(
-        e["id"] == "preferences"
-        for e in defaults["surfaces"]["main_menu"]
-    )
+    main_ids = {e["id"]: e for e in defaults["surfaces"]["main_menu"]}
+    assert main_ids["script_manager"].get("locked") is True
+    assert main_ids["preferences"].get("locked") is True
 
     user_embr = paths.flame_user_embr_dir()
     assert user_embr.name == "embr"
@@ -50,10 +45,11 @@ def main() -> None:
         assert visible_pref is True
         assert order_pref == 200
 
+        # Reorder is allowed; hide requests for locked ids are stripped.
         menus.set_surface_prefs(
             "main_menu",
             order=["preferences", "script_manager"],
-            hidden=["script_manager"],
+            hidden=["script_manager", "preferences"],
             config_root=config_root,
         )
         prefs = menus.load_prefs(config_root)
@@ -61,57 +57,42 @@ def main() -> None:
             "preferences",
             "script_manager",
         ]
-        assert "script_manager" in prefs["menus"]["main_menu"]["hidden"]
+        assert prefs["menus"]["main_menu"]["hidden"] == []
 
         entries = menus.effective_entries("main_menu", config_root=config_root)
         assert [e["id"] for e in entries] == ["preferences", "script_manager"]
-        assert entries[0]["visible"] is True
-        assert entries[1]["visible"] is False
+        assert all(e["visible"] for e in entries)
+        assert all(e["locked"] for e in entries)
         assert entries[0]["order"] == 100
         assert entries[1]["order"] == 200
 
         def _noop(_selection):
             return None
 
-        shown = menus.action(
+        shown_pref = menus.action(
             "main_menu",
             "preferences",
             execute=_noop,
             caption="Preferences",
             config_root=config_root,
         )
-        hidden = menus.action(
+        shown_sm = menus.action(
             "main_menu",
             "script_manager",
             execute=_noop,
             caption="Script Manager",
             config_root=config_root,
         )
-        assert shown is not None
-        assert shown["order"] == 100
-        assert hidden is None
+        assert shown_pref is not None and shown_sm is not None
+        assert shown_pref["order"] == 100
+        assert shown_sm["order"] == 200
 
-        group = menus.group("main_menu", [shown, hidden])
+        group = menus.group("main_menu", [shown_pref, shown_sm])
         assert len(group) == 1
-        assert group[0]["name"] == "Embr"
-        assert [a["name"] for a in group[0]["actions"]] == ["Preferences"]
-
-        # Hidden-only contribution must be [] (hooks must not fall back to showing it).
-        assert (
-            menus.group(
-                "main_menu",
-                [
-                    menus.action(
-                        "main_menu",
-                        "script_manager",
-                        execute=_noop,
-                        caption="Script Manager",
-                        config_root=config_root,
-                    ),
-                ],
-            )
-            == []
-        )
+        assert [a["name"] for a in group[0]["actions"]] == [
+            "Preferences",
+            "Script Manager",
+        ]
 
         menus.reset_menu_prefs(config_root=config_root)
         restored = menus.effective_entries("main_menu", config_root=config_root)
@@ -142,6 +123,16 @@ def main() -> None:
     with tempfile.TemporaryDirectory() as td:
         w = embr_pref_window.PreferencesWindow(config_root=Path(td))
         assert w._list.count() >= 2
+        # Locked rows are checked and not user-checkable.
+        for i in range(w._list.count()):
+            item = w._list.item(i)
+            assert item.checkState() == __import__(
+                "PySide6.QtCore", fromlist=["Qt"]
+            ).Qt.CheckState.Checked
+            assert not (
+                item.flags()
+                & __import__("PySide6.QtCore", fromlist=["Qt"]).Qt.ItemFlag.ItemIsUserCheckable
+            )
         w.close()
 
     print("ok")

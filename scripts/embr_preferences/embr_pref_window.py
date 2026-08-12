@@ -164,15 +164,23 @@ class PreferencesWindow(QDialog):
         for entry in menus.effective_entries(surface, config_root=self._config_root):
             item = QListWidgetItem(entry["caption"])
             item.setData(Qt.ItemDataRole.UserRole, entry["id"])
-            item.setFlags(
+            flags = (
                 Qt.ItemFlag.ItemIsEnabled
                 | Qt.ItemFlag.ItemIsSelectable
-                | Qt.ItemFlag.ItemIsUserCheckable
                 | Qt.ItemFlag.ItemIsDragEnabled
             )
-            item.setCheckState(
-                Qt.CheckState.Checked if entry["visible"] else Qt.CheckState.Unchecked
-            )
+            if entry.get("locked"):
+                # Always-on tools (Script Manager / Preferences): show checked, not hideable.
+                item.setFlags(flags)
+                item.setCheckState(Qt.CheckState.Checked)
+                item.setToolTip("Always visible — cannot be hidden.")
+            else:
+                item.setFlags(flags | Qt.ItemFlag.ItemIsUserCheckable)
+                item.setCheckState(
+                    Qt.CheckState.Checked
+                    if entry["visible"]
+                    else Qt.CheckState.Unchecked
+                )
             self._list.addItem(item)
         self._list.blockSignals(False)
         label = menus.SURFACE_LABELS.get(surface, surface)
@@ -181,12 +189,21 @@ class PreferencesWindow(QDialog):
     def _collect_surface(self) -> tuple[list[str], list[str]]:
         order: list[str] = []
         hidden: list[str] = []
+        locked = {
+            e["id"]
+            for e in menus.effective_entries(
+                self._current_surface or "", config_root=self._config_root
+            )
+            if e.get("locked")
+        }
         for i in range(self._list.count()):
             item = self._list.item(i)
             action_id = str(item.data(Qt.ItemDataRole.UserRole) or "")
             if not action_id:
                 continue
             order.append(action_id)
+            if action_id in locked:
+                continue
             if item.checkState() != Qt.CheckState.Checked:
                 hidden.append(action_id)
         return order, hidden

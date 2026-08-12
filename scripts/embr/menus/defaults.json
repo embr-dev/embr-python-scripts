@@ -6,13 +6,15 @@
         "id": "script_manager",
         "caption": "Script Manager",
         "order": 100,
-        "visible": true
+        "visible": true,
+        "locked": true
       },
       {
         "id": "preferences",
         "caption": "Preferences",
         "order": 200,
-        "visible": true
+        "visible": true,
+        "locked": true
       }
     ],
     "timeline": [],

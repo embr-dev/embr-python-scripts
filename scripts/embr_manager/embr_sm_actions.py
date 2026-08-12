@@ -20,7 +20,8 @@ class ActionError(RuntimeError):
     """Raised when a package action fails."""
 
 
-PROTECTED_FROM_UNINSTALL = frozenset({"embr", "embr_manager"})
+PROTECTED_FROM_UNINSTALL = frozenset({"embr", "embr_manager", "embr_preferences"})
+
 
 
 def _dependents(catalog: Catalog, package_id: str, state: local_mod.LocalState) -> list[str]:
@@ -191,7 +192,7 @@ def uninstall_package(
     if package_id in PROTECTED_FROM_UNINSTALL:
         raise ActionError(
             f"Embr Script Manager: cannot uninstall '{package_id}' - "
-            "core packages (Embr Core / Script Manager) are protected. "
+            "core packages (Embr Core / Script Manager / Preferences) are protected. "
             "Remove them manually from the install root if you really need to."
         )
     state = local_mod.load_state(root)

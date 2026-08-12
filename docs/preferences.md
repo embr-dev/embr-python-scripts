@@ -31,6 +31,7 @@ prefs 例:
 ```
 
 - キーは表示名ではなく **安定 action id**。
+- `locked: true` の項目（Script Manager / Preferences）は **常時表示**（Preferences UI でも非表示にできない）。
 - 新しいツールは defaults の末尾に追従（prefs の `order` に無い ID）。
 - **Reset to Defaults** で `menus` を空にする。
 

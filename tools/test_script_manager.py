@@ -43,9 +43,11 @@ def main() -> None:
         td_path = Path(td)
         actions.install_package(cat, "embr", td_path, source_root=source)
         actions.install_package(cat, "embr_manager", td_path, source_root=source)
+        actions.install_package(cat, "embr_preferences", td_path, source_root=source)
         rows = {r["id"]: r["status"] for r in actions.build_status_rows(cat, td_path)}
         assert rows["embr"] == local.STATUS_UP_TO_DATE
         assert rows["embr_manager"] == local.STATUS_UP_TO_DATE
+        assert rows["embr_preferences"] == local.STATUS_UP_TO_DATE
 
         log_py = td_path / "embr" / "embr_log.py"
         log_py.write_text(log_py.read_text(encoding="utf-8") + "\n# x\n", encoding="utf-8")
@@ -62,6 +64,11 @@ def main() -> None:
             pass
         try:
             actions.uninstall_package(cat, "embr_manager", td_path)
+            raise AssertionError("expected protected uninstall to fail")
+        except actions.ActionError:
+            pass
+        try:
+            actions.uninstall_package(cat, "embr_preferences", td_path)
             raise AssertionError("expected protected uninstall to fail")
         except actions.ActionError:
             pass

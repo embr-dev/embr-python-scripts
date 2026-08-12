@@ -166,10 +166,12 @@ def set_surface_prefs(
     prefs = load_prefs(config_root)
     menus = prefs.setdefault("menus", {})
     entry: dict[str, Any] = {}
+    locked_ids = {e["id"] for e in _default_entries(surface) if e.get("locked")}
     if order is not None:
         entry["order"] = [str(x) for x in order]
     if hidden is not None:
-        entry["hidden"] = [str(x) for x in hidden]
+        # Locked actions (Script Manager / Preferences) cannot be hidden.
+        entry["hidden"] = [str(x) for x in hidden if str(x) not in locked_ids]
     if entry:
         menus[surface] = entry
     elif surface in menus:
@@ -196,6 +198,7 @@ def _default_entries(surface: str) -> list[dict[str, Any]]:
                 "caption": str(item.get("caption") or action_id),
                 "order": int(item.get("order") or _DEFAULT_ORDER_FALLBACK),
                 "visible": bool(item.get("visible", True)),
+                "locked": bool(item.get("locked", False)),
             }
         )
     entries.sort(key=lambda e: (e["order"], e["id"]))
@@ -246,12 +249,15 @@ def effective_entries(
     result: list[dict[str, Any]] = []
     for index, action_id in enumerate(ordered_ids):
         base = by_id[action_id]
+        locked = bool(base.get("locked"))
+        user_hidden = action_id in hidden and not locked
         result.append(
             {
                 "id": action_id,
                 "caption": base["caption"],
                 "order": (index + 1) * _ORDER_STEP,
-                "visible": bool(base["visible"]) and action_id not in hidden,
+                "visible": bool(base["visible"]) and not user_hidden,
+                "locked": locked,
                 "default_order": base["order"],
                 "default_visible": base["visible"],
             }

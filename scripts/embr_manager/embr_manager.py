@@ -13,7 +13,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-__version__ = "0.1.13"
+__version__ = "0.1.14"
 
 _DIR = Path(__file__).resolve().parent
 _SCRIPTS = _DIR.parent
