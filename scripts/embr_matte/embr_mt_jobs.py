@@ -146,17 +146,71 @@ def list_jobs(ml_root: Path | None = None) -> list[MatteJob]:
 
 def delete_job(job: MatteJob, ml_root: Path | None = None) -> None:
     """Remove the job folder under ``jobs_root`` (and its status.json)."""
-    import shutil
-
     root = jobs_root(ml_root).resolve()
     job_dir = Path(job.job_dir).expanduser().resolve()
     if job_dir.parent != root:
         raise ValueError(
             f"Refusing to delete job outside jobs root: {job_dir}"
         )
-    if not job_dir.is_dir():
+    if not job_dir.exists():
         return
-    shutil.rmtree(job_dir)
+    _rmtree_force(job_dir)
+
+
+def _rmtree_force(path: Path, *, attempts: int = 6) -> None:
+    """Delete a directory tree, retrying macOS ``.DS_Store`` / ENOTEMPTY races."""
+    import os
+    import shutil
+    import stat
+    import time
+
+    def _writable(target: Path) -> None:
+        try:
+            mode = target.lstat().st_mode
+            os.chmod(target, mode | stat.S_IRWXU)
+        except OSError:
+            pass
+
+    def _onerror(func, name, _exc_info) -> None:
+        target = Path(name)
+        _writable(target)
+        try:
+            func(name)
+        except OSError:
+            pass
+
+    last: BaseException | None = None
+    for round_i in range(attempts):
+        if not path.exists():
+            return
+        try:
+            shutil.rmtree(path, onerror=_onerror)
+        except OSError as exc:
+            last = exc
+
+        if not path.exists():
+            return
+
+        # Manual bottom-up sweep (includes hidden files like .DS_Store).
+        try:
+            for child in sorted(path.rglob("*"), key=lambda p: len(p.parts), reverse=True):
+                try:
+                    if child.is_symlink() or child.is_file():
+                        _writable(child)
+                        child.unlink(missing_ok=True)
+                    elif child.is_dir():
+                        _writable(child)
+                        child.rmdir()
+                except OSError as exc:
+                    last = exc
+            _writable(path)
+            path.rmdir()
+            return
+        except OSError as exc:
+            last = exc
+            time.sleep(0.05 * (round_i + 1))
+
+    raise OSError(f"Could not delete {path}: {last}")
 
 
 def first_image(folder: Path) -> Path | None:

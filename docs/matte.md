@@ -1,6 +1,6 @@
 # Embr Matte
 
-Main Menu → **Embr → Matte**。Media Panel のクリップをジョブ化し、エクスポート／インポートするツール（Phase 0）。
+Main Menu → **Embr → Matte**。Media Panel のクリップをジョブ化し、エクスポート／インポートするツール。
 
 | 項目 | 内容 |
 |------|------|
@@ -8,8 +8,9 @@ Main Menu → **Embr → Matte**。Media Panel のクリップをジョブ化し
 | ジョブ格納 | `$EMBR_ML_ROOT/jobs/<job_id>/`（既定は `~/Embr/ml/jobs/`） |
 | ジョブ ID | 12 桁 hex（`uuid4`）。**フォルダ名＝ID** |
 | プリセット | [`presets/Embr.xml`](../scripts/embr_matte/presets/Embr.xml)（`Embr_custom` 由来） |
+| ランタイム | `$EMBR_HOME`（Manager PyBox と同じ `embr_runtime`） |
 
-## Phase 0 操作
+## Phase 0 — クリップ往復
 
 1. ウィンドウを開く（空リスト + **Add**）
 2. Media Panel でクリップを選び **Add** → `jobs/<id>/export/` に PNG 書き出し（この連番をそのまま RGB input として使う）
@@ -18,6 +19,12 @@ Main Menu → **Embr → Matte**。Media Panel のクリップをジョブ化し
 5. **Delete** → 確認後に `$EMBR_ML_ROOT/jobs/<id>/` を削除
 
 ジョブはウィンドウを閉じても `status.json` で残る。親オブジェクト参照はセッション内のみ；再起動後は親名で解決し、見つからなければ失敗する（別リールへ流さない）。
+
+## Phase 1 — Runtime gate
+
+窓上部に **Check / Install**。`embr_runtime.probe_status` で home / uv / venv / media / matte / weights を確認し、不足時は Manager PyBox と同じ `install_or_update_runtime` をバックグラウンド実行（ログ表示）。チャンネルは Manager で選んだものを共用。
+
+Add / Import はランタイム無しでも可（Phase 0）。今後の ML（SAM2 / MatAnyone2）は ready が前提。
 
 ## Export プリセット
 
@@ -33,4 +40,4 @@ Main Menu → **Embr → Matte**。Media Panel のクリップをジョブ化し
 
 ## 後続（未実装）
 
-ランタイム導入 UI、SAM2 ガイド、MatAnyone2 実行キューなど。AI ランタイム全体は [ai-runtime.md](./ai-runtime.md)。
+MatAnyone2 実行キュー、SAM2 ガイド UI。AI ランタイム全体は [ai-runtime.md](./ai-runtime.md)。

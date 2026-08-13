@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 import embr_mt_export as mt_export
 import embr_mt_import as mt_import
 import embr_mt_jobs as jobs
+import embr_mt_runtime as mt_runtime
 import embr_mt_selection as mt_sel
 import embr_ui as embr_ui
 
@@ -139,7 +140,7 @@ class _JobRow(QWidget):
 
 
 class MatteWindow(QWidget):
-    """Phase 0 Matte hub: Add exports, list jobs, Import + cache."""
+    """Matte hub: runtime gate, Add / list / Import / cache."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -160,9 +161,15 @@ class MatteWindow(QWidget):
         )
         body.setSpacing(embr_ui.EMBR_SPACE_2)
 
+        self._runtime = mt_runtime.RuntimePanel(
+            self, set_status=self._set_status
+        )
+        body.addWidget(self._runtime)
+
         hint = QLabel(
             "Select clip(s) in the Media Panel, then Add. "
-            "Import returns frames to the parent reel saved at Add time."
+            "Import returns frames to the parent reel saved at Add time. "
+            "ML steps need a ready runtime (Check / Install above)."
         )
         hint.setObjectName("embrMuted")
         hint.setWordWrap(True)
@@ -211,9 +218,9 @@ class MatteWindow(QWidget):
         self._btn_refresh.clicked.connect(self.reload_jobs)
         self._btn_add.clicked.connect(self.add_selection)
 
-        self.resize(640, 480)
+        self.resize(720, 560)
         self.reload_jobs()
-        self._set_status("Ready — select Media Panel clips and press Add.")
+        self._runtime.refresh(check_remote=False)
 
     def _set_status(self, text: str) -> None:
         self._status.setText(text)

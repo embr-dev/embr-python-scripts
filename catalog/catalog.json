@@ -135,15 +135,15 @@
     {
       "id": "embr_matte",
       "name": "Embr Matte",
-      "version": "0.1.5",
+      "version": "0.2.0",
       "kind": "tool",
       "path": "scripts/embr_matte",
       "min_flame": "2025.0",
-      "digest": "57c465a58653361b72505db3f1f6a51ad920852df4f877920449ee98b9e3bc11",
+      "digest": "b56fca070b73d0995d75927bd1800c8429c4b6b5a80a00d4d9e329066a674cfa",
       "files": [
         {
           "path": "embr_matte.py",
-          "sha256": "2942af5581c70d3a61de3d34c3b4817e3b981698e7a6eb954dfa7d8c208a625c"
+          "sha256": "6bff27203c06c7dc03e5e1cdbc339b40f235fb67f04efea7dc8f0e7e96cf4fb7"
         },
         {
           "path": "embr_mt_export.py",
@@ -155,7 +155,11 @@
         },
         {
           "path": "embr_mt_jobs.py",
-          "sha256": "f2af17e7eaa91d0cbf2a1f07efe7cbb41ab5948f20bdeb57e5047da412af85d9"
+          "sha256": "ca920fe35483e11c88812cb253cf16b4192a67b833ead103d513d77e30a26580"
+        },
+        {
+          "path": "embr_mt_runtime.py",
+          "sha256": "b49c80b5eeecab6e20f261df494224a12f78ff2ebb27ee5cf201efcdb5b4829f"
         },
         {
           "path": "embr_mt_selection.py",
@@ -163,7 +167,7 @@
         },
         {
           "path": "embr_mt_window.py",
-          "sha256": "8d6ac087e601e2939afb4765a231612ac9baa497284dda145458e981dc471eb1"
+          "sha256": "699cb6237d432cc2a2ee7af45e7763c1e3bbcc803ebb0147a698b3e8866d6524"
         },
         {
           "path": "presets/Embr.xml",
