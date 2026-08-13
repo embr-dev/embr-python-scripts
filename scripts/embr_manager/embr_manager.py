@@ -14,7 +14,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 
 _DIR = Path(__file__).resolve().parent
 _SCRIPTS = _DIR.parent

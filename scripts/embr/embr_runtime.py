@@ -6,6 +6,7 @@ Distinct from Flame hooks install root (``…/python/Embr/``). See
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
@@ -17,8 +18,16 @@ from typing import Callable
 LogFn = Callable[[str], None]
 
 HANDLERS_REPO_URL = "https://github.com/embr-dev/embr-pybox-handlers.git"
-HANDLERS_REPO_REF = "dev"
 HANDLERS_DIR_NAME = "embr-pybox-handlers"
+
+# Same channel names as Script Manager; git ref for embr-pybox-handlers.
+CHANNELS: dict[str, str] = {
+    "stable": "stable",
+    "latest": "main",
+    "dev": "dev",
+}
+DEFAULT_CHANNEL = "dev"
+CHANNEL_ORDER = ("stable", "latest", "dev")
 
 
 class EmbrRuntimeError(RuntimeError):
@@ -76,21 +85,109 @@ def legacy_ml_symlink() -> Path:
     return Path.home() / "embr-ml"
 
 
-def ensure_layout(home: Path | None = None) -> Path:
-    """Create ``bin/ ml/ tools/ repos/ venvs/`` under ``EMBR_HOME``."""
-    root = (home or embr_home()).expanduser().resolve()
-    for name in ("bin", "ml", "tools", "repos", "venvs"):
-        (root / name).mkdir(parents=True, exist_ok=True)
-    readme = root / "README.md"
-    if not readme.is_file():
-        readme.write_text(
-            "# Embr runtime\n\n"
-            "AI / PyBox data and tools. Distinct from Flame hooks "
-            "(`…/python/Embr/`).\n"
-            "Uninstall: `rm -rf` this directory (and optional `~/embr-ml`).\n",
-            encoding="utf-8",
+def normalize_channel(channel: str | None) -> str:
+    name = (channel or DEFAULT_CHANNEL).strip().lower()
+    if name not in CHANNELS:
+        known = ", ".join(CHANNEL_ORDER)
+        raise EmbrRuntimeError(f"Unknown PyBox channel {name!r}; use one of: {known}")
+    return name
+
+
+def channel_ref(channel: str | None = None) -> str:
+    """Return git branch/tag for a channel name."""
+    return CHANNELS[normalize_channel(channel)]
+
+
+def state_path(home: Path | None = None) -> Path:
+    return (home or embr_home()) / ".embr" / "runtime.json"
+
+
+def get_channel(home: Path | None = None) -> str:
+    path = state_path(home)
+    if not path.is_file():
+        return DEFAULT_CHANNEL
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return DEFAULT_CHANNEL
+    raw = str(data.get("channel") or DEFAULT_CHANNEL)
+    try:
+        return normalize_channel(raw)
+    except EmbrRuntimeError:
+        return DEFAULT_CHANNEL
+
+
+def set_channel(home: Path | None = None, channel: str | None = None) -> str:
+    root = ensure_layout(home)
+    chosen = normalize_channel(channel)
+    path = state_path(root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {"channel": chosen}
+    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    return chosen
+
+
+def _git_capture(
+    args: list[str],
+    *,
+    cwd: Path | None = None,
+    timeout: float = 60,
+) -> tuple[int, str, str]:
+    try:
+        proc = subprocess.run(
+            args,
+            cwd=str(cwd) if cwd else None,
+            text=True,
+            capture_output=True,
+            timeout=timeout,
         )
-    return root
+    except (OSError, subprocess.SubprocessError) as exc:
+        return 1, "", str(exc)
+    return proc.returncode, (proc.stdout or "").strip(), (proc.stderr or "").strip()
+
+
+def local_handlers_sha(repo: Path) -> str:
+    if not (repo / ".git").is_dir():
+        return ""
+    code, out, _ = _git_capture(["git", "rev-parse", "HEAD"], cwd=repo)
+    return out if code == 0 else ""
+
+
+def local_handlers_branch(repo: Path) -> str:
+    if not (repo / ".git").is_dir():
+        return ""
+    code, out, _ = _git_capture(
+        ["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=repo
+    )
+    return out if code == 0 else ""
+
+
+def remote_handlers_sha(
+    ref: str,
+    *,
+    repo: Path | None = None,
+) -> tuple[str, str]:
+    """Return ``(sha, error)`` for ``refs/heads/<ref>`` via ``git ls-remote``."""
+    if shutil.which("git") is None:
+        return "", "git not found"
+    target = HANDLERS_REPO_URL
+    cwd: Path | None = None
+    if repo is not None and (repo / ".git").is_dir():
+        cwd = repo
+        target = "origin"
+    code, out, err = _git_capture(
+        ["git", "ls-remote", target, f"refs/heads/{ref}"],
+        cwd=cwd,
+        timeout=90,
+    )
+    if code != 0:
+        return "", err or f"ls-remote failed ({code})"
+    if not out:
+        return "", f"branch “{ref}” not found on remote"
+    sha = out.split()[0].strip()
+    if len(sha) < 7:
+        return "", f"unexpected ls-remote output for “{ref}”"
+    return sha, ""
 
 
 @dataclass(frozen=True)
@@ -99,12 +196,18 @@ class CheckItem:
     label: str
     ok: bool
     detail: str = ""
+    mark: str = ""  # OK / — / UPD; empty → derive from ok
 
 
 @dataclass(frozen=True)
 class RuntimeStatus:
     home: Path
     items: tuple[CheckItem, ...]
+    channel: str = DEFAULT_CHANNEL
+    local_sha: str = ""
+    remote_sha: str = ""
+    update_available: bool = False
+    sync_error: str = ""
 
     @property
     def ok_count(self) -> int:
@@ -115,14 +218,66 @@ class RuntimeStatus:
         return bool(self.items) and all(i.ok for i in self.items)
 
 
-def probe_status(home: Path | None = None) -> RuntimeStatus:
-    """Return checklist for the PyBox / AI runtime."""
+def probe_status(
+    home: Path | None = None,
+    *,
+    channel: str | None = None,
+    check_remote: bool = True,
+) -> RuntimeStatus:
+    """Return checklist for the PyBox / AI runtime.
+
+    When ``check_remote`` is True, compares local handlers HEAD to the channel
+    branch on GitHub (``git ls-remote``).
+    """
     root = (home or embr_home()).expanduser().resolve()
+    chosen = normalize_channel(channel if channel is not None else get_channel(root))
+    ref = channel_ref(chosen)
     uv = embr_uv_path(root)
     repo = handlers_repo_path(root)
     venv_py = worker_venv_python(root)
     weight = matanyone_weight_path(root)
     bootstrap = repo / "worker" / "embr_ml" / "bootstrap.py"
+
+    local_sha = local_handlers_sha(repo) if repo.is_dir() else ""
+    local_branch = local_handlers_branch(repo) if repo.is_dir() else ""
+    remote_sha = ""
+    sync_error = ""
+    update_available = False
+    if check_remote and repo.is_dir() and (repo / ".git").is_dir():
+        remote_sha, sync_error = remote_handlers_sha(ref, repo=repo)
+        if remote_sha and local_sha and remote_sha != local_sha:
+            update_available = True
+        elif remote_sha and local_branch and local_branch not in (ref, "HEAD"):
+            # On another branch than the selected channel.
+            if local_sha != remote_sha:
+                update_available = True
+    elif check_remote and not repo.is_dir():
+        # Still probe remote so Install knows the channel exists.
+        remote_sha, sync_error = remote_handlers_sha(ref, repo=None)
+
+    if local_sha and remote_sha and not update_available and not sync_error:
+        repo_detail = f"{chosen} @{local_sha[:7]} (up to date)"
+        repo_mark = "OK"
+        repo_ok = True
+    elif update_available and local_sha and remote_sha:
+        repo_detail = (
+            f"{chosen} @{local_sha[:7]} → {remote_sha[:7]} (update available)"
+        )
+        repo_mark = "UPD"
+        repo_ok = True  # installed; update is advisory
+    elif local_sha:
+        note = sync_error or "remote not checked"
+        repo_detail = f"{chosen} @{local_sha[:7]} ({note})"
+        repo_mark = "OK"
+        repo_ok = True
+    else:
+        repo_detail = str(repo)
+        if remote_sha:
+            repo_detail = f"not installed — remote {chosen} @{remote_sha[:7]}"
+        elif sync_error:
+            repo_detail = f"{repo_detail} — {sync_error}"
+        repo_mark = ""
+        repo_ok = repo.is_dir() and (repo / "handlers").is_dir()
 
     items: list[CheckItem] = [
         CheckItem("home", "Embr home", root.is_dir(), str(root)),
@@ -135,8 +290,9 @@ def probe_status(home: Path | None = None) -> RuntimeStatus:
         CheckItem(
             "repo",
             "handlers repo",
-            repo.is_dir() and (repo / "handlers").is_dir(),
-            str(repo),
+            repo_ok and repo.is_dir() and (repo / "handlers").is_dir(),
+            repo_detail,
+            mark=repo_mark,
         ),
         CheckItem(
             "bootstrap",
@@ -167,7 +323,32 @@ def probe_status(home: Path | None = None) -> RuntimeStatus:
                 "Present (Embr prefers ~/Embr/bin/uv; optional cleanup)",
             )
         )
-    return RuntimeStatus(home=root, items=tuple(items))
+    return RuntimeStatus(
+        home=root,
+        items=tuple(items),
+        channel=chosen,
+        local_sha=local_sha,
+        remote_sha=remote_sha,
+        update_available=update_available,
+        sync_error=sync_error,
+    )
+
+
+def ensure_layout(home: Path | None = None) -> Path:
+    """Create ``bin/ ml/ tools/ repos/ venvs/`` under ``EMBR_HOME``."""
+    root = (home or embr_home()).expanduser().resolve()
+    for name in ("bin", "ml", "tools", "repos", "venvs"):
+        (root / name).mkdir(parents=True, exist_ok=True)
+    readme = root / "README.md"
+    if not readme.is_file():
+        readme.write_text(
+            "# Embr runtime\n\n"
+            "AI / PyBox data and tools. Distinct from Flame hooks "
+            "(`…/python/Embr/`).\n"
+            "Uninstall: `rm -rf` this directory (and optional `~/embr-ml`).\n",
+            encoding="utf-8",
+        )
+    return root
 
 
 def _run(
@@ -240,15 +421,19 @@ def install_uv(home: Path | None = None, *, log: LogFn | None = None) -> Path:
 def ensure_handlers_repo(
     home: Path | None = None,
     *,
+    channel: str | None = None,
     update: bool = False,
     log: LogFn | None = None,
 ) -> Path:
     """Clone or optionally update ``embr-pybox-handlers`` under ``repos/``."""
     root = ensure_layout(home)
+    chosen = normalize_channel(channel if channel is not None else get_channel(root))
+    ref = channel_ref(chosen)
+    set_channel(root, chosen)
     repo = handlers_repo_path(root)
     if repo.is_dir() and (repo / ".git").is_dir():
         if update:
-            _log(log, f"Updating handlers repo: {repo}")
+            _log(log, f"Updating handlers repo ({chosen} → {ref}): {repo}")
             _run(
                 [
                     "git",
@@ -258,7 +443,7 @@ def ensure_handlers_repo(
                     "--depth",
                     "1",
                     "origin",
-                    HANDLERS_REPO_REF,
+                    ref,
                 ],
                 log=log,
             )
@@ -269,8 +454,8 @@ def ensure_handlers_repo(
                     str(repo),
                     "checkout",
                     "-B",
-                    HANDLERS_REPO_REF,
-                    f"origin/{HANDLERS_REPO_REF}",
+                    ref,
+                    f"origin/{ref}",
                 ],
                 log=log,
             )
@@ -285,7 +470,7 @@ def ensure_handlers_repo(
         raise EmbrRuntimeError("git is required to clone embr-pybox-handlers")
 
     repo.parent.mkdir(parents=True, exist_ok=True)
-    _log(log, f"Cloning {HANDLERS_REPO_URL} ({HANDLERS_REPO_REF}) → {repo}")
+    _log(log, f"Cloning {HANDLERS_REPO_URL} ({chosen} / {ref}) → {repo}")
     _run(
         [
             "git",
@@ -293,7 +478,7 @@ def ensure_handlers_repo(
             "--depth",
             "1",
             "--branch",
-            HANDLERS_REPO_REF,
+            ref,
             HANDLERS_REPO_URL,
             str(repo),
         ],
@@ -457,16 +642,21 @@ def run_bootstrap(
 def install_or_update_runtime(
     home: Path | None = None,
     *,
+    channel: str | None = None,
     update_repo: bool = True,
     log: LogFn | None = None,
 ) -> RuntimeStatus:
     """Full Install / Update: layout → uv → clone/pull → bootstrap."""
     root = ensure_layout(home)
+    chosen = set_channel(root, channel if channel is not None else get_channel(root))
     _log(log, f"EMBR_HOME={root}")
+    _log(log, f"channel={chosen} (ref={channel_ref(chosen)})")
     install_uv(root, log=log)
-    ensure_handlers_repo(root, update=update_repo, log=log)
+    ensure_handlers_repo(root, channel=chosen, update=update_repo, log=log)
     run_bootstrap(root, log=log)
-    status = probe_status(root)
+    status = probe_status(root, channel=chosen, check_remote=True)
+    if status.update_available:
+        _log(log, "Warning: still behind remote after update.")
     _log(log, f"Done — {status.ok_count}/{len(status.items)} checks OK.")
     return status
 
@@ -474,18 +664,20 @@ def install_or_update_runtime(
 def repair_runtime(
     home: Path | None = None,
     *,
+    channel: str | None = None,
     log: LogFn | None = None,
 ) -> RuntimeStatus:
     """Repair: ensure uv + repo, recreate bootstrap (venv if broken)."""
     root = ensure_layout(home)
+    chosen = set_channel(root, channel if channel is not None else get_channel(root))
     install_uv(root, log=log)
-    ensure_handlers_repo(root, update=False, log=log)
+    ensure_handlers_repo(root, channel=chosen, update=False, log=log)
     venv = handlers_repo_path(root) / "worker" / ".venv"
     if venv.is_dir() and not worker_venv_python(root).is_file():
         _log(log, f"Removing broken venv: {venv}")
         shutil.rmtree(venv, ignore_errors=True)
     run_bootstrap(root, log=log)
-    return probe_status(root)
+    return probe_status(root, channel=chosen, check_remote=True)
 
 
 def uninstall_runtime(

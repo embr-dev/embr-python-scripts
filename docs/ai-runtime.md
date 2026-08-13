@@ -7,7 +7,17 @@ Flame hooks（`…/python/Embr/`）とは別に、**AI / PyBox 用ランタイ�
 | UI | Embr Manager → **PyBox** タブ |
 | CLI | `python3 tools/install_embr_runtime.py` |
 | 実装 | `scripts/embr/embr_runtime.py` |
-| handlers | [embr-pybox-handlers](https://github.com/embr-dev/embr-pybox-handlers)（`dev`） |
+| handlers | [embr-pybox-handlers](https://github.com/embr-dev/embr-pybox-handlers) |
+
+チャンネル（Scripts と同じ名前）:
+
+| チャンネル | git ref | 備考 |
+|------------|---------|------|
+| `stable` | `stable` | handlers にブランチが無いと Install / Refresh で分かる |
+| `latest` | `main` | |
+| `dev` | `dev` | 既定 |
+
+選択は `$EMBR_HOME/.embr/runtime.json` に保存。Refresh でリモート SHA と比較し、更新があれば handlers 行が **UPD** になる。
 
 詳細な契約・レイアウトは handlers 側の `docs/handoff-embr-runtime-install.md` / `docs/embr-home.md` を正とする。
 

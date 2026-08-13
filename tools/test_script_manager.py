@@ -117,14 +117,22 @@ def main() -> None:
     assert w._tabs.tabText(1) == "PyBox"
     assert w._scripts._table.rowCount() >= 2
     assert w._pybox is not None
-    w._pybox.refresh()
-    assert "Runtime:" in w._pybox._home_label.text()
-
+    assert w._pybox._channel_combo.count() == 3
+    # Avoid network in offline unit path: probe without remote.
     import embr_runtime as rt
+
+    w._pybox._apply_status(
+        rt.probe_status(channel="dev", check_remote=False)
+    )
+    assert "Runtime:" in w._pybox._home_label.text()
 
     with tempfile.TemporaryDirectory() as td:
         home = Path(td) / "Embr"
-        st = rt.probe_status(home)
+        rt.set_channel(home, "latest")
+        assert rt.get_channel(home) == "latest"
+        assert rt.channel_ref("latest") == "main"
+        assert rt.channel_ref("dev") == "dev"
+        st = rt.probe_status(home, channel="dev", check_remote=False)
         assert st.home == home.resolve()
         assert not st.all_ok
         assert any(i.id == "uv" and not i.ok for i in st.items)
