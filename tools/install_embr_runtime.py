@@ -67,6 +67,11 @@ def main() -> int:
         help="Repair uv / venv / bootstrap without forcing repo update",
     )
     parser.add_argument(
+        "--media-only",
+        action="store_true",
+        help="Only install numpy / Pillow / OpenEXR into an existing worker venv",
+    )
+    parser.add_argument(
         "--uninstall",
         action="store_true",
         help="Remove EMBR_HOME (and optional ~/embr-ml symlink)",
@@ -101,6 +106,13 @@ def main() -> int:
         if args.status:
             _print_status(
                 runtime.probe_status(home, channel=channel, check_remote=True)
+            )
+            return 0
+
+        if args.media_only:
+            runtime.ensure_media_deps(home, log=log)
+            _print_status(
+                runtime.probe_status(home, channel=channel, check_remote=False)
             )
             return 0
 

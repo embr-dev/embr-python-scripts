@@ -29,6 +29,15 @@ CHANNELS: dict[str, str] = {
 DEFAULT_CHANNEL = "dev"
 CHANNEL_ORDER = ("stable", "latest", "dev")
 
+# Media stack for prepare_frames / publish_cache / HUD (no torch).
+# Handlers remote pyproject may still list empty deps; Install pins these explicitly.
+MEDIA_DEPS: tuple[str, ...] = (
+    "numpy>=1.24",
+    "Pillow>=10.0",
+    "OpenEXR>=3.2",
+)
+MEDIA_IMPORT_PROBE = "import numpy, PIL, OpenEXR"
+
 
 class EmbrRuntimeError(RuntimeError):
     """Raised when a runtime install / repair step fails."""
@@ -305,6 +314,11 @@ def probe_status(
             "worker venv",
             venv_py.is_file() and os.access(venv_py, os.X_OK),
             str(venv_py),
+        ),
+        CheckItem(
+            "media",
+            "media deps",
+            *media_deps_ok(root),
         ),
         CheckItem(
             "weights",
@@ -611,6 +625,64 @@ def bootstrap_command(
     )
 
 
+def media_deps_ok(home: Path | None = None) -> tuple[bool, str]:
+    """Return ``(ok, detail)`` by importing media packages in the worker venv."""
+    py = worker_venv_python(home)
+    if not (py.is_file() and os.access(py, os.X_OK)):
+        return False, "worker venv missing"
+    code, _out, err = _git_capture(
+        [str(py), "-c", MEDIA_IMPORT_PROBE],
+        timeout=30,
+    )
+    if code == 0:
+        return True, "numpy / Pillow / OpenEXR"
+    detail = (err or "import failed").splitlines()[-1] if err else "import failed"
+    return False, detail
+
+
+def ensure_media_deps(
+    home: Path | None = None,
+    *,
+    log: LogFn | None = None,
+) -> None:
+    """Install numpy / Pillow / OpenEXR into ``worker/.venv`` via Embr uv."""
+    root = (home or embr_home()).expanduser().resolve()
+    uv = embr_uv_path(root)
+    worker = handlers_repo_path(root) / "worker"
+    py = worker_venv_python(root)
+    if not (uv.is_file() and os.access(uv, os.X_OK)):
+        raise EmbrRuntimeError(f"uv missing: {uv}")
+    if not (py.is_file() and os.access(py, os.X_OK)):
+        raise EmbrRuntimeError(f"worker venv python missing: {py}")
+
+    ok, detail = media_deps_ok(root)
+    if ok:
+        _log(log, f"media deps already present: {detail}")
+        return
+
+    env = {
+        "EMBR_HOME": str(root),
+        "EMBR_ML_ROOT": str(embr_ml_root(root)),
+        "EMBR_UV": str(uv),
+        "PATH": f"{root / 'bin'}{os.pathsep}{os.environ.get('PATH', '')}",
+        "UV_INSTALL_DIR": str(root / "bin"),
+        "VIRTUAL_ENV": str(worker / ".venv"),
+    }
+    _log(log, "Installing media deps into worker venv (numpy / Pillow / OpenEXR)…")
+    _run(
+        [str(uv), "pip", "install", "--python", str(py), *MEDIA_DEPS],
+        log=log,
+        env=env,
+        cwd=worker,
+    )
+    ok, detail = media_deps_ok(root)
+    if not ok:
+        raise EmbrRuntimeError(
+            "media deps install finished but import still fails: " + detail
+        )
+    _log(log, f"media deps ready: {detail}")
+
+
 def run_bootstrap(
     home: Path | None = None,
     *,
@@ -646,7 +718,7 @@ def install_or_update_runtime(
     update_repo: bool = True,
     log: LogFn | None = None,
 ) -> RuntimeStatus:
-    """Full Install / Update: layout → uv → clone/pull → bootstrap."""
+    """Full Install / Update: layout → uv → clone/pull → bootstrap → media deps."""
     root = ensure_layout(home)
     chosen = set_channel(root, channel if channel is not None else get_channel(root))
     _log(log, f"EMBR_HOME={root}")
@@ -654,6 +726,7 @@ def install_or_update_runtime(
     install_uv(root, log=log)
     ensure_handlers_repo(root, channel=chosen, update=update_repo, log=log)
     run_bootstrap(root, log=log)
+    ensure_media_deps(root, log=log)
     status = probe_status(root, channel=chosen, check_remote=True)
     if status.update_available:
         _log(log, "Warning: still behind remote after update.")
@@ -667,7 +740,7 @@ def repair_runtime(
     channel: str | None = None,
     log: LogFn | None = None,
 ) -> RuntimeStatus:
-    """Repair: ensure uv + repo, recreate bootstrap (venv if broken)."""
+    """Repair: ensure uv + repo, recreate bootstrap, reinstall media deps."""
     root = ensure_layout(home)
     chosen = set_channel(root, channel if channel is not None else get_channel(root))
     install_uv(root, log=log)
@@ -677,6 +750,7 @@ def repair_runtime(
         _log(log, f"Removing broken venv: {venv}")
         shutil.rmtree(venv, ignore_errors=True)
     run_bootstrap(root, log=log)
+    ensure_media_deps(root, log=log)
     return probe_status(root, channel=chosen, check_remote=True)
 
 
