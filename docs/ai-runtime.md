@@ -46,6 +46,12 @@ Flame hooks（`…/python/Embr/`）とは別に、**AI / PyBox 用ランタイ�
 3. `embr-pybox-handlers` を `repos/` に clone（または update）  
 4. `worker/embr_ml/bootstrap.py` を実行（venv・モデル確保）
 
+bootstrap の起動は **Python 3.10+ 必須**。Linux では Flame 起動でも `sys.executable` が古い `/usr/bin/python3`（3.6）になることがあるため、Install は次の順で選ぶ:
+
+1. `$EMBR_HOME/bin/uv run --python 3.10`（推奨）
+2. `/opt/Autodesk/python/*/bin/python3`
+3. `sys.executable`（3.10+ のときだけ）
+
 Repair は uv / repo を確保し、壊れた `worker/.venv` があれば消してから bootstrap。  
 Uninstall は `$EMBR_HOME` 全体と任意で `~/embr-ml` シンボリックリンク。**hooks は触らない**。
 

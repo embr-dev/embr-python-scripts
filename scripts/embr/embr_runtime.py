@@ -300,13 +300,122 @@ def ensure_handlers_repo(
     return repo
 
 
+def find_autodesk_python3() -> Path | None:
+    """Newest ``/opt/Autodesk/python/<ver>/bin/python3``, if present."""
+    override = os.environ.get("FLAME_PYTHON", "").strip()
+    if override:
+        path = Path(override).expanduser()
+        if path.is_file() and os.access(path, os.X_OK):
+            return path.resolve()
+
+    base = Path(os.environ.get("FLAME_PYTHON_ROOT", "/opt/Autodesk/python"))
+    if not base.is_dir():
+        return None
+
+    newest: Path | None = None
+    newest_key: tuple[int, ...] = ()
+    for child in base.iterdir():
+        if not child.is_dir():
+            continue
+        py = child / "bin" / "python3"
+        if not (py.is_file() and os.access(py, os.X_OK)):
+            continue
+        parts: list[int] = []
+        for token in child.name.split("."):
+            if token.isdigit():
+                parts.append(int(token))
+            else:
+                break
+        key = tuple(parts) if parts else (0,)
+        if newest is None or key >= newest_key:
+            newest = py
+            newest_key = key
+    return newest.resolve() if newest is not None else None
+
+
+def _python_version_tuple(executable: Path) -> tuple[int, int] | None:
+    try:
+        proc = subprocess.run(
+            [
+                str(executable),
+                "-c",
+                "import sys; print(f'{sys.version_info[0]}.{sys.version_info[1]}')",
+            ],
+            text=True,
+            capture_output=True,
+            timeout=15,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if proc.returncode != 0:
+        return None
+    text = (proc.stdout or "").strip()
+    try:
+        major_s, minor_s = text.split(".", 1)
+        return int(major_s), int(minor_s)
+    except ValueError:
+        return None
+
+
+def bootstrap_command(
+    bootstrap: Path,
+    *,
+    repo: Path,
+    ml: Path,
+    home: Path,
+    log: LogFn | None = None,
+) -> list[str]:
+    """Build argv to run handlers bootstrap on Python 3.10+.
+
+    Flame on Linux often has ``sys.executable`` = ``/usr/bin/python3`` (3.6),
+    which cannot parse ``from __future__ import annotations``. Prefer Embr
+    ``uv run --python 3.10``, then Autodesk python, then a modern ``sys.executable``.
+    """
+    args = [
+        str(bootstrap),
+        "--repo-root",
+        str(repo),
+        "--ml-root",
+        str(ml),
+    ]
+    uv = embr_uv_path(home)
+    if uv.is_file() and os.access(uv, os.X_OK):
+        _log(log, f"bootstrap via uv ({uv}) --python 3.10")
+        return [str(uv), "run", "--python", "3.10", "--no-project", *args]
+
+    for label, candidate in (
+        ("Autodesk python", find_autodesk_python3()),
+        ("sys.executable", Path(sys.executable)),
+    ):
+        if candidate is None:
+            continue
+        ver = _python_version_tuple(candidate)
+        if ver is None:
+            _log(log, f"skip {label}: cannot read version ({candidate})")
+            continue
+        if ver < (3, 10):
+            _log(
+                log,
+                f"skip {label}: Python {ver[0]}.{ver[1]} < 3.10 ({candidate})",
+            )
+            continue
+        _log(log, f"bootstrap via {label}: {candidate} ({ver[0]}.{ver[1]})")
+        return [str(candidate), *args]
+
+    raise EmbrRuntimeError(
+        "Need Python 3.10+ (or Embr uv) to run PyBox bootstrap. "
+        "Install failed because the current interpreter is too old "
+        f"(sys.executable={sys.executable!r})."
+    )
+
+
 def run_bootstrap(
     home: Path | None = None,
     *,
     log: LogFn | None = None,
 ) -> None:
     """Run handlers ``bootstrap.py`` with Embr-local uv on ``PATH``."""
-    root = home or embr_home()
+    root = (home or embr_home()).expanduser().resolve()
     repo = handlers_repo_path(root)
     bootstrap = repo / "worker" / "embr_ml" / "bootstrap.py"
     if not bootstrap.is_file():
@@ -323,19 +432,11 @@ def run_bootstrap(
         "PATH": f"{root / 'bin'}{os.pathsep}{os.environ.get('PATH', '')}",
         "UV_INSTALL_DIR": str(root / "bin"),
     }
-    _log(log, "Running worker bootstrap (may take several minutes)…")
-    _run(
-        [
-            sys.executable,
-            str(bootstrap),
-            "--repo-root",
-            str(repo),
-            "--ml-root",
-            str(ml),
-        ],
-        log=log,
-        env=env,
+    cmd = bootstrap_command(
+        bootstrap, repo=repo, ml=ml, home=root, log=log
     )
+    _log(log, "Running worker bootstrap (may take several minutes)…")
+    _run(cmd, log=log, env=env)
 
 
 def install_or_update_runtime(
