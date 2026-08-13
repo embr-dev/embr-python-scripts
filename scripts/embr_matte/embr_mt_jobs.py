@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -25,12 +25,23 @@ class MatteJob:
     input_dir: str = ""
     created_at: str = ""
     message: str = ""
+    # Live Flame object — never serialize (asdict/deepcopy pickles and fails).
     parent_ref: Any = field(default=None, repr=False, compare=False)
 
     def to_dict(self) -> dict[str, Any]:
-        data = asdict(self)
-        data.pop("parent_ref", None)
-        return data
+        return {
+            "id": self.id,
+            "clip_name": self.clip_name,
+            "job_dir": self.job_dir,
+            "parent_name": self.parent_name,
+            "parent_type": self.parent_type,
+            "status": self.status,
+            "thumbnail": self.thumbnail,
+            "export_dir": self.export_dir,
+            "input_dir": self.input_dir,
+            "created_at": self.created_at,
+            "message": self.message,
+        }
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> MatteJob:
