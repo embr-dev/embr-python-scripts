@@ -75,8 +75,13 @@ def jobs_root(ml_root: Path | None = None) -> Path:
     return path
 
 
-def new_job_id() -> str:
-    """Allocate a unique job id used as the job folder name."""
+def new_job_id(*_args, **_kwargs) -> str:
+    """Allocate a unique job id used as the job folder name.
+
+    Extra args are ignored so a stale Matte window (pre-0.1.2) that still
+    calls ``new_job_id(clip_name)`` keeps working until the singleton is
+    closed and reopened.
+    """
     return uuid.uuid4().hex[:12]
 
 
