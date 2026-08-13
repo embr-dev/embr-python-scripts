@@ -24,10 +24,23 @@ import embr_mt_jobs as jobs
 import embr_mt_selection as mt_sel
 import embr_ui as embr_ui
 
-# Material Icons: file_download
-_ICON_IMPORT = embr_ui.ICON_FILE_DOWNLOAD
+_ICON_IMPORT = embr_ui.ICON_DOWNLOAD
+_ICON_DELETE = embr_ui.ICON_DELETE
 _THUMB_W = 96
 _THUMB_H = 54
+
+
+def _icon_button(glyph: str, tooltip: str) -> QPushButton:
+    btn = QPushButton()
+    btn.setObjectName("embrIconBtn")
+    btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+    btn.setToolTip(tooltip)
+    btn.setFixedSize(36, 36)
+    pix = embr_ui.material_icon_pixmap(glyph, 20, color=embr_ui.EMBR_TEXT)
+    if not pix.isNull():
+        btn.setIcon(pix)
+        btn.setIconSize(pix.size())
+    return btn
 
 
 class _JobRow(QWidget):
@@ -36,6 +49,7 @@ class _JobRow(QWidget):
         job: jobs.MatteJob,
         *,
         on_import,
+        on_delete,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -75,21 +89,19 @@ class _JobRow(QWidget):
         text_col.addStretch(1)
         row.addLayout(text_col, 1)
 
-        self._btn_import = QPushButton()
-        self._btn_import.setObjectName("embrIconBtn")
-        self._btn_import.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self._btn_import.setToolTip("Import to saved parent reel")
-        self._btn_import.setFixedSize(36, 36)
-        pix = embr_ui.material_icon_pixmap(
-            _ICON_IMPORT, 20, color=embr_ui.EMBR_TEXT
+        self._btn_import = _icon_button(
+            _ICON_IMPORT, "Import to saved parent reel"
         )
-        if not pix.isNull():
-            self._btn_import.setIcon(pix)
-            self._btn_import.setIconSize(pix.size())
-        else:
+        if self._btn_import.icon().isNull():
             self._btn_import.setText("In")
         self._btn_import.clicked.connect(lambda: on_import(self.job))
         row.addWidget(self._btn_import, 0, Qt.AlignmentFlag.AlignVCenter)
+
+        self._btn_delete = _icon_button(_ICON_DELETE, "Delete job")
+        if self._btn_delete.icon().isNull():
+            self._btn_delete.setText("Del")
+        self._btn_delete.clicked.connect(lambda: on_delete(self.job))
+        row.addWidget(self._btn_delete, 0, Qt.AlignmentFlag.AlignVCenter)
 
     @staticmethod
     def _meta_text(job: jobs.MatteJob) -> str:
@@ -229,7 +241,11 @@ class MatteWindow(QWidget):
             if job.id in self._session_parents:
                 job.parent_ref = self._session_parents[job.id]
             self._list_layout.addWidget(
-                _JobRow(job, on_import=self.import_job)
+                _JobRow(
+                    job,
+                    on_import=self.import_job,
+                    on_delete=self.delete_job,
+                )
             )
         self._list_layout.addStretch(1)
         self._set_status(
@@ -329,6 +345,30 @@ class MatteWindow(QWidget):
         except Exception as exc:
             self._alert(f"Import failed:\n{exc}")
             self._set_status("Import failed.")
+
+    def delete_job(self, job: jobs.MatteJob) -> None:
+        box = QMessageBox(None)
+        box.setIcon(QMessageBox.Icon.Warning)
+        box.setWindowTitle("Embr Matte")
+        box.setText(
+            f"Delete job “{job.clip_name or job.id}”?\n"
+            f"This removes the folder:\n{job.job_dir}"
+        )
+        box.setStandardButtons(
+            QMessageBox.StandardButton.Cancel
+            | QMessageBox.StandardButton.Yes
+        )
+        box.setDefaultButton(QMessageBox.StandardButton.Cancel)
+        if box.exec() != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            jobs.delete_job(job)
+            self._session_parents.pop(job.id, None)
+            self.reload_jobs()
+            self._set_status(f"Deleted job {job.id}.")
+        except Exception as exc:
+            self._alert(f"Delete failed:\n{exc}")
+            self._set_status("Delete failed.")
 
 
 def open_matte() -> None:

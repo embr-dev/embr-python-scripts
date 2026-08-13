@@ -144,6 +144,21 @@ def list_jobs(ml_root: Path | None = None) -> list[MatteJob]:
     return result
 
 
+def delete_job(job: MatteJob, ml_root: Path | None = None) -> None:
+    """Remove the job folder under ``jobs_root`` (and its status.json)."""
+    import shutil
+
+    root = jobs_root(ml_root).resolve()
+    job_dir = Path(job.job_dir).expanduser().resolve()
+    if job_dir.parent != root:
+        raise ValueError(
+            f"Refusing to delete job outside jobs root: {job_dir}"
+        )
+    if not job_dir.is_dir():
+        return
+    shutil.rmtree(job_dir)
+
+
 def first_image(folder: Path) -> Path | None:
     frames = collect_images(folder)
     return frames[0] if frames else None

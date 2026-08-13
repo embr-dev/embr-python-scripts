@@ -6,15 +6,15 @@
     {
       "id": "embr",
       "name": "Embr Core",
-      "version": "0.2.30",
+      "version": "0.2.31",
       "kind": "library",
       "path": "scripts/embr",
       "min_flame": "2025.0",
-      "digest": "b4d37efbc79e434f0cae3c1d0478e03696138f11c0226f8ba4eeb059f8a39bce",
+      "digest": "405ec54634a0747c54e7e71815096991a6e2b79ad507af6c489eb49c2ad4ae99",
       "files": [
         {
           "path": "__init__.py",
-          "sha256": "d4ba59ddb9151585d9adeaf395adc10571685dd54c97568a2265badec9b5da8d"
+          "sha256": "b7e74894528a68051a0d7eb5f95084795c3b399426412281122b00b954022e63"
         },
         {
           "path": "assets/fonts/Figtree/Figtree-Bold.ttf",
@@ -78,7 +78,7 @@
         },
         {
           "path": "embr_ui.py",
-          "sha256": "b7c2699b950ed019759cd2b81606d83a11307dcb01d776d1cd7317b7861cff17"
+          "sha256": "4c5e2b68ef1fa1a3353cfcb221675d56250a87560872325ca58cd28b79e7957f"
         },
         {
           "path": "embr_version.py",
@@ -135,15 +135,15 @@
     {
       "id": "embr_matte",
       "name": "Embr Matte",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "kind": "tool",
       "path": "scripts/embr_matte",
       "min_flame": "2025.0",
-      "digest": "7ab92020a7914fa5a5e227c09ca7f7ddf9d982296ccf5716c99ac84af165c3e5",
+      "digest": "57c465a58653361b72505db3f1f6a51ad920852df4f877920449ee98b9e3bc11",
       "files": [
         {
           "path": "embr_matte.py",
-          "sha256": "b8296d9b38b5812674acf49a20866ec10b1d39877f45c84677bbea0763a050f2"
+          "sha256": "2942af5581c70d3a61de3d34c3b4817e3b981698e7a6eb954dfa7d8c208a625c"
         },
         {
           "path": "embr_mt_export.py",
@@ -155,7 +155,7 @@
         },
         {
           "path": "embr_mt_jobs.py",
-          "sha256": "e9104f411d9ed82257cb9002d479e7131807d6a6163781c6c057046b3f22b545"
+          "sha256": "f2af17e7eaa91d0cbf2a1f07efe7cbb41ab5948f20bdeb57e5047da412af85d9"
         },
         {
           "path": "embr_mt_selection.py",
@@ -163,7 +163,7 @@
         },
         {
           "path": "embr_mt_window.py",
-          "sha256": "882379e754b6b8902cd4e85e49334e9c0fe4dc54e88504f45da67db73925fc2b"
+          "sha256": "8d6ac087e601e2939afb4765a231612ac9baa497284dda145458e981dc471eb1"
         },
         {
           "path": "presets/Embr.xml",

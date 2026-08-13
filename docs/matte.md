@@ -13,8 +13,9 @@ Main Menu → **Embr → Matte**。Media Panel のクリップをジョブ化し
 
 1. ウィンドウを開く（空リスト + **Add**）
 2. Media Panel でクリップを選び **Add** → `jobs/<id>/export/` に PNG 書き出し（この連番をそのまま RGB input として使う）
-3. 一覧: サムネ・クリップ名・job id・**Import**
+3. 一覧: サムネ・クリップ名・job id・**Import (download)**・**Delete**
 4. **Import** → Add 時点の親リールへ `import_clips` → 名前を `<clip>-ML-Matte` に変更 → 記録したソース解像度 / FPS / ビット深度へ `reformat(Fill)` → `cache_media("current")`
+5. **Delete** → 確認後に `$EMBR_ML_ROOT/jobs/<id>/` を削除
 
 ジョブはウィンドウを閉じても `status.json` で残る。親オブジェクト参照はセッション内のみ；再起動後は親名で解決し、見つからなければ失敗する（別リールへ流さない）。
 
