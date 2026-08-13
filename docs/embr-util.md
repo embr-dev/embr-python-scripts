@@ -11,7 +11,8 @@ Flame 2025.0+ 向けの共通ユーティリティ。MIT。PyFlame は使わな�
 | `embr.version` | → `embr_version.py` |
 | `embr.log` | → `embr_log.py` |
 | `embr.hooks` | → `embr_hooks.py` |
-| `embr.paths` | → `embr_paths.py` |
+| `embr.paths` | → `embr_paths.py`（Flame hooks / `python/Embr`） |
+| `embr.runtime` | → `embr_runtime.py`（AI / PyBox の `$EMBR_HOME`、既定 `~/Embr`） |
 | `embr.names` | → `embr_names.py` |
 | `embr.ui` | → `embr_ui.py` |
 | `embr.menus` | → `embr_menus.py`（defaults / prefs / Flame action dict） |

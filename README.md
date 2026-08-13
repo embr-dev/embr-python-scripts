@@ -16,7 +16,8 @@ Early setup. Hooks / util は `scripts/`。規約は [docs/conventions.md](./doc
 | [docs/conventions.md](./docs/conventions.md) | スクリプト／パッケージ規約 |
 | [docs/dev-setup.md](./docs/dev-setup.md) | `DL_PYTHON_HOOK_PATH` の出典と試し方 |
 | [docs/embr-util.md](./docs/embr-util.md) | `scripts/embr` 共通 util |
-| [docs/script-manager.md](./docs/script-manager.md) | Script Manager（GitHub カタログ連携） |
+| [docs/script-manager.md](./docs/script-manager.md) | Embr Manager（Scripts タブ / カタログ） |
+| [docs/ai-runtime.md](./docs/ai-runtime.md) | PyBox / AI ランタイム（`~/Embr`） |
 | [docs/api/](./docs/api/) | Flame Python API（hooks / module / attributes / examples） |
 | [docs/api/attributes/](./docs/api/attributes/) | Attributes（属性）原文寄り集約 |
 | [docs/pyflame-reference.md](./docs/pyflame-reference.md) | PyFlame 参照メモ（Embr 自前 util 設計用） |

@@ -114,7 +114,20 @@ def main() -> None:
         source_root=SCRIPTS,
     )
     assert w._tabs.tabText(0) == "Scripts"
+    assert w._tabs.tabText(1) == "PyBox"
     assert w._scripts._table.rowCount() >= 2
+    assert w._pybox is not None
+    w._pybox.refresh()
+    assert "Runtime:" in w._pybox._home_label.text()
+
+    import embr_runtime as rt
+
+    with tempfile.TemporaryDirectory() as td:
+        home = Path(td) / "Embr"
+        st = rt.probe_status(home)
+        assert st.home == home.resolve()
+        assert not st.all_ok
+        assert any(i.id == "uv" and not i.ok for i in st.items)
     print("ALL PASSED")
 
 

@@ -2,7 +2,7 @@
 # Embr Manager
 #
 # Main Menu: Embr / Manager  (window title: Embr Manager)
-# Scripts tab = former Script Manager. PyBox / Matchbox tabs come later.
+# Scripts tab = former Script Manager. PyBox = AI runtime under ~/Embr.
 #
 # Flame + DL_PYTHON_HOOK_PATH loads each .py by basename (not as a package).
 # Helpers use unique names (embr_sm_*.py). Import them as top-level modules
@@ -14,7 +14,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 _DIR = Path(__file__).resolve().parent
 _SCRIPTS = _DIR.parent

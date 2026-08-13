@@ -29,6 +29,7 @@ import embr_ui as embr_ui
 import embr_sm_actions as actions
 import embr_sm_bootstrap as bootstrap
 import embr_sm_local as local
+from embr_sm_pybox import PyBoxTab
 from embr_sm_catalog import (
     CHANNEL_ORDER,
     Catalog,
@@ -552,7 +553,7 @@ class ScriptsTab(QWidget):
 
 
 class EmbrManagerWindow(QDialog):
-    """Tabbed hub. Scripts is first; PyBox / Matchbox tabs come later."""
+    """Tabbed hub. Scripts + PyBox; Matchbox comes later."""
 
     def __init__(
         self,
@@ -584,7 +585,9 @@ class EmbrManagerWindow(QDialog):
             channel=channel,
             set_status=self._set_status,
         )
+        self._pybox = PyBoxTab(self, set_status=self._set_status)
         self._tabs.addTab(self._scripts, "Scripts")
+        self._tabs.addTab(self._pybox, "PyBox")
         layout.addWidget(self._tabs, 1)
 
         self._status = QLabel()
@@ -597,7 +600,7 @@ class EmbrManagerWindow(QDialog):
         self._status.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         layout.addWidget(self._status)
 
-        self.resize(780, 520)
+        self.resize(780, 560)
         self._tabs.currentChanged.connect(self._on_tab_changed)
         self._scripts.activate()
 
@@ -609,6 +612,8 @@ class EmbrManagerWindow(QDialog):
         widget = self._tabs.widget(index)
         if widget is self._scripts:
             self._scripts.activate()
+        elif widget is self._pybox:
+            self._pybox.activate()
 
 
 # Back-compat alias for older imports / tests.

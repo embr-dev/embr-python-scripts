@@ -539,6 +539,15 @@ def stylesheet(*, combo_arrow_url: str | None = None) -> str:
         color: #5C5E62;
         border-color: #3A3C40;
     }}
+    QPlainTextEdit#embrLog {{
+        background-color: {EMBR_SURFACE};
+        color: {EMBR_TEXT};
+        border: 1px solid {EMBR_BORDER};
+        border-radius: {r}px;
+        padding: {s2}px;
+        selection-background-color: {EMBR_EMBER_DEEP};
+        selection-color: {EMBR_TEXT};
+    }}
     QListWidget, QListView {{
         background-color: {EMBR_SURFACE};
         alternate-background-color: {EMBR_SURFACE_RAISED};

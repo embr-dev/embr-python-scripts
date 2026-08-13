@@ -23,6 +23,7 @@ import embr_log as log
 import embr_menus as menus
 import embr_names as names
 import embr_paths as paths
+import embr_runtime as runtime
 import embr_ui as ui
 import embr_version as version
 
@@ -32,8 +33,9 @@ __all__ = [
     "menus",
     "names",
     "paths",
+    "runtime",
     "ui",
     "version",
 ]
 
-__version__ = "0.2.23"
+__version__ = "0.2.24"

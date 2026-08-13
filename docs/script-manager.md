@@ -2,9 +2,11 @@
 
 GitHub 上のカタログを正とし、ローカルの Embr インストールと照合して **Install / Update / Uninstall / Repair** するツール。
 
+PyBox / AI ランタイム（`~/Embr`）は別タブ。→ [ai-runtime.md](./ai-runtime.md)
+
 | 項目 | 内容 |
 |------|------|
-| メニュー | Main Menu → **Embr → Manager**（ウィンドウ: Embr Manager / Scripts タブ） |
+| メニュー | Main Menu → **Embr → Manager**（ウィンドウ: Embr Manager / Scripts・PyBox タブ） |
 | パッケージ | `scripts/embr_manager/` |
 | カタログ | [`catalog/catalog.json`](../catalog/catalog.json) |
 | 生成 | `python3 tools/gen_catalog.py`（`ref` は現在の git branch） |
