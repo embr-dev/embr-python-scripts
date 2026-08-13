@@ -117,6 +117,8 @@ def build_package(pkg_dir: Path) -> dict:
             entry["name"] = "Preferences"
         elif pkg_id == "embr_rename":
             entry["name"] = "Rename"
+        elif pkg_id == "embr_matte":
+            entry["name"] = "Embr Matte"
     return entry
 
 

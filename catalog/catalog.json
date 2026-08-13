@@ -6,15 +6,15 @@
     {
       "id": "embr",
       "name": "Embr Core",
-      "version": "0.2.29",
+      "version": "0.2.30",
       "kind": "library",
       "path": "scripts/embr",
       "min_flame": "2025.0",
-      "digest": "dcc7eb1e2b25b49c9fc4ee099fefc6e2a1c634eecb8f37159bee08a1c3b5e577",
+      "digest": "b4d37efbc79e434f0cae3c1d0478e03696138f11c0226f8ba4eeb059f8a39bce",
       "files": [
         {
           "path": "__init__.py",
-          "sha256": "d54d8a71dd710c1b9459cb58ef6e945da56dc7413b2b283ab3b0a74877c87cb3"
+          "sha256": "d4ba59ddb9151585d9adeaf395adc10571685dd54c97568a2265badec9b5da8d"
         },
         {
           "path": "assets/fonts/Figtree/Figtree-Bold.ttf",
@@ -78,7 +78,7 @@
         },
         {
           "path": "embr_ui.py",
-          "sha256": "acaeb3ca4aaede9bd2366849c710e68731b5d6d85d205d836362820f25403639"
+          "sha256": "b7c2699b950ed019759cd2b81606d83a11307dcb01d776d1cd7317b7861cff17"
         },
         {
           "path": "embr_version.py",
@@ -86,7 +86,7 @@
         },
         {
           "path": "menus/defaults.json",
-          "sha256": "45f8cf3b1094cf1bc412345f55f086f8e4a1f3a03b17d8866f2d6b540b009f4e"
+          "sha256": "e7ec33d8c8217abe81d2dbec51f3945e78c5fe4ea44dd2ab285310bca572774a"
         }
       ]
     },
@@ -126,6 +126,48 @@
         {
           "path": "embr_sm_window.py",
           "sha256": "f670d144bba218494a07f782759c6bb8c48ea339cedde9142cc30f41940d13c1"
+        }
+      ],
+      "depends": [
+        "embr"
+      ]
+    },
+    {
+      "id": "embr_matte",
+      "name": "Embr Matte",
+      "version": "0.1.0",
+      "kind": "tool",
+      "path": "scripts/embr_matte",
+      "min_flame": "2025.0",
+      "digest": "8035e8e93b7df573fe9415006c86d5082971c928e9030d47e466b641c532a3b1",
+      "files": [
+        {
+          "path": "embr_matte.py",
+          "sha256": "05c1055ae25decdc1a95d9f4a37774352da9568dc4951f0a1eb4731dc353c248"
+        },
+        {
+          "path": "embr_mt_export.py",
+          "sha256": "7c5e57844c8f137a78b957f4b8eebe4597fba5bf2b44eea6c96d27bd52dfaf95"
+        },
+        {
+          "path": "embr_mt_import.py",
+          "sha256": "643d234beb5153cec680f93fccfad6aae5f49644954f6b4f919a231857a3ec90"
+        },
+        {
+          "path": "embr_mt_jobs.py",
+          "sha256": "f3e6c8d06990e1f6ac8ce0d1a84b3c14b6051d3af07d768806eac1fa4c00459d"
+        },
+        {
+          "path": "embr_mt_selection.py",
+          "sha256": "69f5bb668a5b81f48c073a65172e8ff67e8fc532c89b8b5e213d040663154b5e"
+        },
+        {
+          "path": "embr_mt_window.py",
+          "sha256": "e27a00f0dd64ca15e425ac51c967c4a422a2f8945297111cbde123ae3c84f47a"
+        },
+        {
+          "path": "presets/Embr.xml",
+          "sha256": "814d64d432b66fc22b844421f31e21d479eff778eaa07afe39b34b6f18675ec6"
         }
       ],
       "depends": [

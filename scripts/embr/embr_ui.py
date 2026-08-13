@@ -58,6 +58,7 @@ ICON_RESTORE = "\ue3e0"  # filter_none
 ICON_CLOSE = "\ue5cd"  # close
 ICON_EXPAND_MORE = "\ue5cf"  # expand_more (dropdown chevron)
 ICON_ARROW_FORWARD = "\ue5c8"  # arrow_forward
+ICON_FILE_DOWNLOAD = "\ue2c4"  # file_download
 
 _ICON_TOOLTIPS = {
     ICON_MINIMIZE: "Minimize",

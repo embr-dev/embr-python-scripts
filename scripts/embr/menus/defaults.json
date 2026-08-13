@@ -10,6 +10,12 @@
         "locked": true
       },
       {
+        "id": "matte",
+        "caption": "Matte",
+        "order": 150,
+        "visible": true
+      },
+      {
         "id": "preferences",
         "caption": "Preferences",
         "order": 200,
