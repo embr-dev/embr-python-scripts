@@ -19,9 +19,9 @@ def preset_path() -> Path:
 def export_clip_to_job(clip: Any, export_dir: Path) -> None:
     """Foreground-export ``clip`` into ``export_dir`` using Embr.xml.
 
-    Preset uses ``startFrame=1`` (6-digit padding). Prefer 1 over 0 so
-    sequences match Flame/timecode-style numbering and MatAnyone prepare
-    (1-based ``000001`` …).
+    Bundled preset (from Embr_custom): ``startFrame=1``, 6-digit padding,
+    empty ``namePattern`` so frames land flat under ``export/`` and can be
+    used directly as RGB input without a copy/normalize step.
     """
     import flame
 

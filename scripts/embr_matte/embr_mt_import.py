@@ -7,6 +7,8 @@ from typing import Any
 
 import embr_mt_jobs as jobs
 
+IMPORT_NAME_SUFFIX = "-ML-Matte"
+
 
 class MatteImportError(RuntimeError):
     """Raised when import or cache fails."""
@@ -37,23 +39,71 @@ def _find_destination(job: jobs.MatteJob) -> Any:
     return found[0]
 
 
+def import_clip_name(job: jobs.MatteJob) -> str:
+    base = (job.clip_name or job.id or "clip").strip() or "clip"
+    return f"{base}{IMPORT_NAME_SUFFIX}"
+
+
+def _set_clip_name(clip: Any, name: str) -> None:
+    try:
+        clip.name = name
+        return
+    except Exception:
+        pass
+    setter = getattr(clip, "name", None)
+    if hasattr(setter, "set_value"):
+        setter.set_value(name)
+
+
+def _apply_source_resolution(clip: Any, width: int, height: int) -> None:
+    if width <= 0 or height <= 0:
+        return
+    ratio = float(width) / float(height) if height else 0.0
+    try:
+        clip.reformat(
+            width=width,
+            height=height,
+            ratio=ratio,
+            resize_mode="Fit",
+        )
+        return
+    except TypeError:
+        pass
+    except Exception:
+        pass
+    try:
+        clip.reformat(width=width, height=height)
+    except Exception:
+        pass
+
+
 def import_job_to_parent(job: jobs.MatteJob) -> list[Any]:
-    """Import ``input/`` (Phase 0) into the parent recorded at Add time."""
+    """Import export/ RGB sequence into the parent recorded at Add time."""
     import flame
 
     destination = _find_destination(job)
-    input_dir = Path(job.input_dir or (Path(job.job_dir) / "input"))
-    frames = jobs.collect_images(input_dir)
+    media_dir = Path(
+        job.input_dir
+        or job.export_dir
+        or (Path(job.job_dir) / "export")
+    )
+    frames = jobs.collect_images(media_dir)
     if not frames:
-        raise MatteImportError(f"No frames to import under {input_dir}")
+        raise MatteImportError(f"No frames to import under {media_dir}")
 
-    # Folder import: Flame accepts a directory of media.
-    imported = flame.import_clips(str(input_dir), destination)
+    imported = flame.import_clips(str(media_dir), destination)
     if imported is None:
-        return []
-    if not isinstance(imported, (list, tuple)):
-        return [imported]
-    return list(imported)
+        clips: list[Any] = []
+    elif not isinstance(imported, (list, tuple)):
+        clips = [imported]
+    else:
+        clips = list(imported)
+
+    target_name = import_clip_name(job)
+    for clip in clips:
+        _set_clip_name(clip, target_name)
+        _apply_source_resolution(clip, job.source_width, job.source_height)
+    return clips
 
 
 def cache_imported(clips: list[Any]) -> None:

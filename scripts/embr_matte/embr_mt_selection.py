@@ -58,3 +58,33 @@ def parent_label(parent: Any | None) -> tuple[str, str]:
     if parent is None:
         return "", ""
     return _clip_name(parent), type(parent).__name__
+
+
+def _as_int(value: Any) -> int:
+    if value is None:
+        return 0
+    if hasattr(value, "get_value"):
+        try:
+            value = value.get_value()
+        except Exception:
+            return 0
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def clip_resolution(clip: Any) -> tuple[int, int]:
+    """Best-effort source width/height for later import reformat."""
+    width = _as_int(getattr(clip, "width", None))
+    height = _as_int(getattr(clip, "height", None))
+    if width > 0 and height > 0:
+        return width, height
+
+    versions = getattr(clip, "versions", None) or []
+    for version in versions:
+        width = _as_int(getattr(version, "width", None))
+        height = _as_int(getattr(version, "height", None))
+        if width > 0 and height > 0:
+            return width, height
+    return 0, 0

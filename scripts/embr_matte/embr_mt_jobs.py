@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-import re
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -23,6 +23,8 @@ class MatteJob:
     thumbnail: str = ""
     export_dir: str = ""
     input_dir: str = ""
+    source_width: int = 0
+    source_height: int = 0
     created_at: str = ""
     message: str = ""
     # Live Flame object — never serialize (asdict/deepcopy pickles and fails).
@@ -39,6 +41,8 @@ class MatteJob:
             "thumbnail": self.thumbnail,
             "export_dir": self.export_dir,
             "input_dir": self.input_dir,
+            "source_width": self.source_width,
+            "source_height": self.source_height,
             "created_at": self.created_at,
             "message": self.message,
         }
@@ -55,6 +59,8 @@ class MatteJob:
             thumbnail=str(data.get("thumbnail") or ""),
             export_dir=str(data.get("export_dir") or ""),
             input_dir=str(data.get("input_dir") or ""),
+            source_width=int(data.get("source_width") or 0),
+            source_height=int(data.get("source_height") or 0),
             created_at=str(data.get("created_at") or ""),
             message=str(data.get("message") or ""),
         )
@@ -69,19 +75,16 @@ def jobs_root(ml_root: Path | None = None) -> Path:
     return path
 
 
-def _safe_name(text: str) -> str:
-    cleaned = re.sub(r"[^\w.\-]+", "_", text.strip()) or "clip"
-    return cleaned[:80]
-
-
-def new_job_id(clip_name: str) -> str:
-    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    return f"{_safe_name(clip_name)}_{stamp}"
+def new_job_id() -> str:
+    """Allocate a unique job id used as the job folder name."""
+    return uuid.uuid4().hex[:12]
 
 
 def create_job_dirs(job_id: str, ml_root: Path | None = None) -> Path:
     job = jobs_root(ml_root) / job_id
-    for name in ("export", "input", "guide", "_work", "alpha", "fgr"):
+    # export/ holds Add PNG sequence and is also Phase-0 RGB input.
+    # guide/_work/alpha/fgr reserved for later ML stages.
+    for name in ("export", "guide", "_work", "alpha", "fgr"):
         (job / name).mkdir(parents=True, exist_ok=True)
     return job
 
@@ -125,44 +128,23 @@ def list_jobs(ml_root: Path | None = None) -> list[MatteJob]:
 
 
 def first_image(folder: Path) -> Path | None:
-    if not folder.is_dir():
-        return None
-    files = sorted(
-        p
-        for p in folder.iterdir()
-        if p.is_file() and p.suffix.lower() in IMAGE_EXTS
-    )
-    return files[0] if files else None
+    frames = collect_images(folder)
+    return frames[0] if frames else None
 
 
 def collect_images(folder: Path) -> list[Path]:
+    """Flat images first; fall back to nested export trees."""
     if not folder.is_dir():
         return []
-    return sorted(
+    flat = sorted(
         p
         for p in folder.iterdir()
         if p.is_file() and p.suffix.lower() in IMAGE_EXTS
     )
-
-
-def normalize_export_to_input(export_dir: Path, input_dir: Path) -> Path | None:
-    """Copy exported frames into ``input/`` as a flat sequence; return first frame."""
-    import shutil
-
-    frames = collect_images(export_dir)
-    if not frames:
-        for child in sorted(export_dir.rglob("*")):
-            if child.is_file() and child.suffix.lower() in IMAGE_EXTS:
-                frames.append(child)
-        frames = sorted(frames)
-    if not frames:
-        return None
-
-    input_dir.mkdir(parents=True, exist_ok=True)
-    for old in collect_images(input_dir):
-        old.unlink(missing_ok=True)
-
-    for index, src in enumerate(frames, start=1):
-        dest = input_dir / f"{index:06d}{src.suffix.lower()}"
-        shutil.copy2(src, dest)
-    return input_dir / f"{1:06d}{frames[0].suffix.lower()}"
+    if flat:
+        return flat
+    return sorted(
+        p
+        for p in folder.rglob("*")
+        if p.is_file() and p.suffix.lower() in IMAGE_EXTS
+    )

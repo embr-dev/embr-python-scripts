@@ -135,39 +135,39 @@
     {
       "id": "embr_matte",
       "name": "Embr Matte",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "kind": "tool",
       "path": "scripts/embr_matte",
       "min_flame": "2025.0",
-      "digest": "e78caf61e48ec39da38b5d23f92c1ff92522b320aff4ea88051722d794dea694",
+      "digest": "79e12f0a0e3b55c45ad46f9dc84cf48747d35cf9e1c9c0503a237cbae5d03593",
       "files": [
         {
           "path": "embr_matte.py",
-          "sha256": "226d288a4ea983e126b4c9b4f0bf4711e010a5621754a5b60bd21ae209742089"
+          "sha256": "c06cc14fa023ef94721cd4b7096798b9613f726a822e5fba5738109700f6290c"
         },
         {
           "path": "embr_mt_export.py",
-          "sha256": "7c5e57844c8f137a78b957f4b8eebe4597fba5bf2b44eea6c96d27bd52dfaf95"
+          "sha256": "23e50793bd6ee5898430f648574f233a7c324de180c52454ceb24acc54e7999c"
         },
         {
           "path": "embr_mt_import.py",
-          "sha256": "643d234beb5153cec680f93fccfad6aae5f49644954f6b4f919a231857a3ec90"
+          "sha256": "7a5f5e31c87a44f4fbe941355497c2084ac035982911d0418da1a038c054cff8"
         },
         {
           "path": "embr_mt_jobs.py",
-          "sha256": "9c51eae3d67da233c36b22925cd218ad1cf559667becfa26c043b35a1ad3464c"
+          "sha256": "98c1dd5908491a90957c6cfb2bdf6c05352612e69644183f0b41e811c04ed84a"
         },
         {
           "path": "embr_mt_selection.py",
-          "sha256": "69f5bb668a5b81f48c073a65172e8ff67e8fc532c89b8b5e213d040663154b5e"
+          "sha256": "c2c0705e4b060f1527d8ad31f81a797973041b4edad3b90da1f49d15256e7056"
         },
         {
           "path": "embr_mt_window.py",
-          "sha256": "e27a00f0dd64ca15e425ac51c967c4a422a2f8945297111cbde123ae3c84f47a"
+          "sha256": "01b51beeea2f2dbb5339eb1082963f1de3799e3f010cd19a3481cba2a7d2789a"
         },
         {
           "path": "presets/Embr.xml",
-          "sha256": "814d64d432b66fc22b844421f31e21d479eff778eaa07afe39b34b6f18675ec6"
+          "sha256": "19dc9237cbe06d308bc7eaebac2b1d654259f629027ea5657790872b58608004"
         }
       ],
       "depends": [

@@ -6,22 +6,29 @@ Main Menu → **Embr → Matte**。Media Panel のクリップをジョブ化し
 |------|------|
 | パッケージ | `scripts/embr_matte/`（カタログ id `embr_matte`） |
 | ジョブ格納 | `$EMBR_ML_ROOT/jobs/<job_id>/`（既定は `~/Embr/ml/jobs/`） |
-| プリセット | [`presets/Embr.xml`](../scripts/embr_matte/presets/Embr.xml) |
+| ジョブ ID | 12 桁 hex（`uuid4`）。**フォルダ名＝ID** |
+| プリセット | [`presets/Embr.xml`](../scripts/embr_matte/presets/Embr.xml)（`Embr_custom` 由来） |
 
 ## Phase 0 操作
 
 1. ウィンドウを開く（空リスト + **Add**）
-2. Media Panel でクリップを選び **Add** → `export/` に PNG 書き出し → `input/` に正規化
-3. 一覧: サムネ・クリップ名・**Import**
-4. **Import** → Add 時点で記録した親リールへ `import_clips` → `cache_media("current")`
+2. Media Panel でクリップを選び **Add** → `jobs/<id>/export/` に PNG 書き出し（この連番をそのまま RGB input として使う）
+3. 一覧: サムネ・クリップ名・job id・**Import**
+4. **Import** → Add 時点の親リールへ `import_clips` → 名前を `<clip>-ML-Matte` に変更 → 記録したソース解像度へ `reformat(Fit)`（取得できた場合）→ `cache_media("current")`
 
 ジョブはウィンドウを閉じても `status.json` で残る。親オブジェクト参照はセッション内のみ；再起動後は親名で解決し、見つからなければ失敗する（別リールへ流さない）。
 
-## Export プリセット（StartFrame）
+## Export プリセット
 
-`Embr.xml` は **`startFrame=1`**・`framePadding=6`・8-bit RGB PNG。`000001` 始まりを Flame / MatAnyone 系と揃えるため、0 始まりにはしない。
+- `startFrame=1` / `framePadding=6` / 8-bit RGB PNG
+- `namePattern` 空（フラット連番。コピー正規化なし）
+- 現行 `Embr_custom`: height 1080 系のスケール設定を含む（プロジェクト検証用）
 
-現行プリセットは `ResScalingValue=50`（50%）。Phase 0 の往復確認用；本番解像度は後続フェーズで見直す。
+## インポート API メモ
+
+- `flame.import_clips(path, destination)` 自体に名前／解像度引数は無い
+- 名前: 戻り値の `PyClip.name = "…-ML-Matte"`
+- 解像度: Add 時に保存した `source_width` / `source_height` で `reformat`（MediaHub options でも指定可能だが、本ツールは import 後 reformat を採用）
 
 ## 後続（未実装）
 

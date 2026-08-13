@@ -68,9 +68,9 @@ class _JobRow(QWidget):
             Qt.TextInteractionFlag.TextSelectableByMouse
         )
         self._meta = QLabel(
-            f"{job.parent_type} “{job.parent_name}” · {job.status}"
+            f"id {job.id} · {job.parent_type} “{job.parent_name}” · {job.status}"
             if job.parent_name
-            else job.status
+            else f"id {job.id} · {job.status}"
         )
         self._meta.setObjectName("embrMuted")
         self._meta.setWordWrap(True)
@@ -259,14 +259,14 @@ class MatteWindow(QWidget):
                 f"Clip “{name}” has no parent reel/folder to import back to."
             )
 
-        job_id = jobs.new_job_id(name)
+        job_id = jobs.new_job_id()
         job_dir = jobs.create_job_dirs(job_id)
         export_dir = job_dir / "export"
-        input_dir = job_dir / "input"
+        source_w, source_h = mt_sel.clip_resolution(clip)
 
         self._set_status(f"Exporting “{name}”…")
         mt_export.export_clip_to_job(clip, export_dir)
-        thumb = jobs.normalize_export_to_input(export_dir, input_dir)
+        thumb = jobs.first_image(export_dir)
         if thumb is None or not thumb.is_file():
             raise mt_export.MatteExportError(
                 f"Export produced no image frames under {export_dir}"
@@ -281,7 +281,10 @@ class MatteWindow(QWidget):
             status="ready",
             thumbnail=str(thumb),
             export_dir=str(export_dir),
-            input_dir=str(input_dir),
+            # Phase 0: exported PNG sequence is the RGB input (no copy).
+            input_dir=str(export_dir),
+            source_width=source_w,
+            source_height=source_h,
             created_at=datetime.now().isoformat(timespec="seconds"),
             parent_ref=parent,
         )
