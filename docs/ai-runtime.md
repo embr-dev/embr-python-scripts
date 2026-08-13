@@ -48,9 +48,11 @@ Flame hooks（`…/python/Embr/`）とは別に、**AI / PyBox 用ランタイ�
 
 bootstrap の起動は **Python 3.10+ 必須**。Linux では Flame 起動でも `sys.executable` が古い `/usr/bin/python3`（3.6）になることがあるため、Install は次の順で選ぶ:
 
-1. `$EMBR_HOME/bin/uv run --python 3.10`（推奨）
-2. `/opt/Autodesk/python/*/bin/python3`
-3. `sys.executable`（3.10+ のときだけ）
+1. `$EMBR_HOME/bin/uv run --python 3.10 --directory …/worker -m embr_ml.bootstrap`（推奨）
+2. `/opt/Autodesk/python/*/bin/python3 -m embr_ml.bootstrap`（`cwd=worker`）
+3. `sys.executable`（3.10+ のときだけ、同様に `-m`）
+
+`…/embr_ml/bootstrap.py` をファイルとして直実行すると `ModuleNotFoundError: embr_ml` になる。
 
 Repair は uv / repo を確保し、壊れた `worker/.venv` があれば消してから bootstrap。  
 Uninstall は `$EMBR_HOME` 全体と任意で `~/embr-ml` シンボリックリンク。**hooks は触らない**。

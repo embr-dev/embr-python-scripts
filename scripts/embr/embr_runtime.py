@@ -188,15 +188,17 @@ def _run(
         text=True,
         capture_output=True,
     )
+    out_lines = []
     if proc.stdout:
-        for line in proc.stdout.splitlines():
-            _log(log, line)
+        out_lines.extend(proc.stdout.splitlines())
     if proc.stderr:
-        for line in proc.stderr.splitlines():
-            _log(log, line)
+        out_lines.extend(proc.stderr.splitlines())
+    for line in out_lines:
+        _log(log, line)
     if proc.returncode != 0:
+        tail = "\n".join(out_lines[-25:]) if out_lines else "(no output)"
         raise EmbrRuntimeError(
-            f"Command failed ({proc.returncode}): {' '.join(cmd)}"
+            f"Command failed ({proc.returncode}): {' '.join(cmd)}\n{tail}"
         )
 
 
@@ -358,21 +360,25 @@ def _python_version_tuple(executable: Path) -> tuple[int, int] | None:
 
 
 def bootstrap_command(
-    bootstrap: Path,
     *,
     repo: Path,
     ml: Path,
     home: Path,
     log: LogFn | None = None,
-) -> list[str]:
-    """Build argv to run handlers bootstrap on Python 3.10+.
+) -> tuple[list[str], Path | None]:
+    """Build ``(argv, cwd)`` to run ``python -m embr_ml.bootstrap``.
 
-    Flame on Linux often has ``sys.executable`` = ``/usr/bin/python3`` (3.6),
-    which cannot parse ``from __future__ import annotations``. Prefer Embr
-    ``uv run --python 3.10``, then Autodesk python, then a modern ``sys.executable``.
+    Running ``…/embr_ml/bootstrap.py`` as a file fails with
+    ``ModuleNotFoundError: embr_ml``. Prefer Embr ``uv run`` with
+    ``--directory worker``, else Autodesk / modern python with ``cwd=worker``.
     """
-    args = [
-        str(bootstrap),
+    worker = repo / "worker"
+    if not (worker / "embr_ml" / "bootstrap.py").is_file():
+        raise EmbrRuntimeError(f"bootstrap package missing under {worker}")
+
+    module_args = [
+        "-m",
+        "embr_ml.bootstrap",
         "--repo-root",
         str(repo),
         "--ml-root",
@@ -380,8 +386,19 @@ def bootstrap_command(
     ]
     uv = embr_uv_path(home)
     if uv.is_file() and os.access(uv, os.X_OK):
-        _log(log, f"bootstrap via uv ({uv}) --python 3.10")
-        return [str(uv), "run", "--python", "3.10", "--no-project", *args]
+        _log(log, f"bootstrap via uv ({uv}) --python 3.10 -m embr_ml.bootstrap")
+        return (
+            [
+                str(uv),
+                "run",
+                "--python",
+                "3.10",
+                "--directory",
+                str(worker),
+                *module_args,
+            ],
+            None,
+        )
 
     for label, candidate in (
         ("Autodesk python", find_autodesk_python3()),
@@ -400,7 +417,7 @@ def bootstrap_command(
             )
             continue
         _log(log, f"bootstrap via {label}: {candidate} ({ver[0]}.{ver[1]})")
-        return [str(candidate), *args]
+        return [str(candidate), *module_args], worker
 
     raise EmbrRuntimeError(
         "Need Python 3.10+ (or Embr uv) to run PyBox bootstrap. "
@@ -414,7 +431,7 @@ def run_bootstrap(
     *,
     log: LogFn | None = None,
 ) -> None:
-    """Run handlers ``bootstrap.py`` with Embr-local uv on ``PATH``."""
+    """Run handlers ``embr_ml.bootstrap`` with Embr-local uv on ``PATH``."""
     root = (home or embr_home()).expanduser().resolve()
     repo = handlers_repo_path(root)
     bootstrap = repo / "worker" / "embr_ml" / "bootstrap.py"
@@ -432,11 +449,9 @@ def run_bootstrap(
         "PATH": f"{root / 'bin'}{os.pathsep}{os.environ.get('PATH', '')}",
         "UV_INSTALL_DIR": str(root / "bin"),
     }
-    cmd = bootstrap_command(
-        bootstrap, repo=repo, ml=ml, home=root, log=log
-    )
+    cmd, cwd = bootstrap_command(repo=repo, ml=ml, home=root, log=log)
     _log(log, "Running worker bootstrap (may take several minutes)…")
-    _run(cmd, log=log, env=env)
+    _run(cmd, log=log, env=env, cwd=cwd)
 
 
 def install_or_update_runtime(
