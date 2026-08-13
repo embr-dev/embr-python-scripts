@@ -30,6 +30,11 @@ _ICON_DELETE = embr_ui.ICON_DELETE
 _THUMB_W = 96
 _THUMB_H = 54
 
+_HINT_READY = "Media Panel で選択して Add。Import は Add 時の親へ。"
+_HINT_NEED_RT = (
+    "Media Panel で選択して Add。ML には上の Install が必要。"
+)
+
 
 def _icon_button(glyph: str, tooltip: str) -> QPushButton:
     btn = QPushButton()
@@ -166,14 +171,10 @@ class MatteWindow(QWidget):
         )
         body.addWidget(self._runtime)
 
-        hint = QLabel(
-            "Select clip(s) in the Media Panel, then Add. "
-            "Import returns frames to the parent reel saved at Add time. "
-            "ML steps need a ready runtime (Check / Install above)."
-        )
-        hint.setObjectName("embrMuted")
-        hint.setWordWrap(True)
-        body.addWidget(hint)
+        self._hint = QLabel(_HINT_READY)
+        self._hint.setObjectName("embrMuted")
+        self._hint.setWordWrap(True)
+        body.addWidget(self._hint)
 
         self._empty = QLabel("No jobs yet.")
         self._empty.setObjectName("embrMuted")
@@ -217,8 +218,10 @@ class MatteWindow(QWidget):
 
         self._btn_refresh.clicked.connect(self.reload_jobs)
         self._btn_add.clicked.connect(self.add_selection)
+        self._runtime.readiness_changed.connect(self._on_runtime_ready)
 
-        self.resize(720, 560)
+        self.resize(640, 520)
+        self._job_count = 0
         self.reload_jobs()
         self._runtime.refresh(check_remote=False)
 
@@ -243,6 +246,7 @@ class MatteWindow(QWidget):
                 w.deleteLater()
 
         loaded = jobs.list_jobs()
+        self._job_count = len(loaded)
         self._empty.setVisible(not loaded)
         for job in loaded:
             if job.id in self._session_parents:
@@ -255,11 +259,19 @@ class MatteWindow(QWidget):
                 )
             )
         self._list_layout.addStretch(1)
+        self._set_jobs_status(self._job_count)
+
+    def _set_jobs_status(self, count: int) -> None:
         self._set_status(
-            f"{len(loaded)} job{'s' if len(loaded) != 1 else ''}."
-            if loaded
+            f"{count} job{'s' if count != 1 else ''}."
+            if count
             else "No jobs yet."
         )
+
+    def _on_runtime_ready(self, ready: bool) -> None:
+        self._hint.setText(_HINT_READY if ready else _HINT_NEED_RT)
+        if not getattr(self._runtime, "_busy", False):
+            self._set_jobs_status(self._job_count)
 
     def add_selection(self) -> None:
         clips = mt_sel.iter_selected_clips()

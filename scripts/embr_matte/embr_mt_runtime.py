@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from PySide6.QtCore import QObject, QThread, Qt, Signal
+from PySide6.QtCore import QObject, QThread, Signal
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -31,14 +31,16 @@ def matte_ready(status: runtime.RuntimeStatus) -> bool:
     return all(by_id.get(cid) and by_id[cid].ok for cid in _MATTE_CHECK_IDS)
 
 
-def matte_summary(status: runtime.RuntimeStatus) -> str:
-    """One-line status for the Matte runtime bar."""
+def matte_compact(status: runtime.RuntimeStatus) -> str:
+    """Short one-line label for the runtime bar (not the footer)."""
     ch = status.channel
     by_id = {item.id: item for item in status.items}
     if matte_ready(status):
-        matte = by_id.get("matte")
-        detail = matte.detail if matte else "ok"
-        return f"Runtime ready — {detail} · channel “{ch}”"
+        detail = (by_id.get("matte").detail if by_id.get("matte") else "") or "ok"
+        device = detail
+        if "(" in detail and detail.endswith(")"):
+            device = detail[detail.rfind("(") + 1 : -1].strip() or detail
+        return f"Ready · {device} · {ch}"
 
     missing = [
         by_id[cid].label
@@ -46,11 +48,15 @@ def matte_summary(status: runtime.RuntimeStatus) -> str:
         if cid in by_id and not by_id[cid].ok
     ]
     if not missing:
-        missing = ["runtime"]
-    return (
-        f"Runtime incomplete — missing: {', '.join(missing)} · "
-        f"channel “{ch}”. Use Install."
-    )
+        return f"Need Install · {ch}"
+    if len(missing) == 1:
+        return f"Need Install · {missing[0]} · {ch}"
+    return f"Need Install · {len(missing)} checks · {ch}"
+
+
+# Back-compat alias for callers/docs.
+def matte_summary(status: runtime.RuntimeStatus) -> str:
+    return matte_compact(status)
 
 
 class _InstallWorker(QObject):
@@ -76,7 +82,7 @@ class _InstallWorker(QObject):
 
 
 class RuntimePanel(QWidget):
-    """Compact runtime probe + Install for Embr Matte."""
+    """One-line runtime probe + Install; log only while installing."""
 
     readiness_changed = Signal(bool)
 
@@ -101,9 +107,9 @@ class RuntimePanel(QWidget):
 
         row = QHBoxLayout()
         row.setSpacing(embr_ui.EMBR_SPACE_2)
-        self._summary = QLabel("Checking runtime…")
+        self._summary = QLabel("Checking…")
         self._summary.setObjectName("embrMuted")
-        self._summary.setWordWrap(True)
+        self._summary.setWordWrap(False)
         self._summary.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse
         )
@@ -111,26 +117,18 @@ class RuntimePanel(QWidget):
 
         self._btn_check = QPushButton("Check")
         self._btn_install = QPushButton("Install")
-        self._btn_install.setObjectName("embrAccent")
         for btn in (self._btn_check, self._btn_install):
             btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         row.addWidget(self._btn_check)
         row.addWidget(self._btn_install)
         root.addLayout(row)
 
-        self._home = QLabel()
-        self._home.setObjectName("embrMuted")
-        self._home.setTextInteractionFlags(
-            Qt.TextInteractionFlag.TextSelectableByMouse
-        )
-        root.addWidget(self._home)
-
         self._log = QPlainTextEdit()
         self._log.setObjectName("embrLog")
         self._log.setReadOnly(True)
         self._log.setMaximumBlockCount(4000)
         self._log.setPlaceholderText("Install log…")
-        self._log.setMaximumHeight(140)
+        self._log.setMaximumHeight(120)
         self._log.setVisible(False)
         mono = QFont("Menlo")
         mono.setStyleHint(QFont.StyleHint.Monospace)
@@ -143,6 +141,7 @@ class RuntimePanel(QWidget):
 
         self._btn_check.clicked.connect(self.refresh)
         self._btn_install.clicked.connect(self._start_install)
+        self._update_install_style()
 
     @property
     def ready(self) -> bool:
@@ -152,44 +151,63 @@ class RuntimePanel(QWidget):
         if self._set_status_fn is not None:
             self._set_status_fn(text)
 
+    def _update_install_style(self) -> None:
+        # Accent only when runtime is not ready (Add owns accent otherwise).
+        if self._ready:
+            self._btn_install.setObjectName("")
+        else:
+            self._btn_install.setObjectName("embrAccent")
+        style = self._btn_install.style()
+        if style is not None:
+            style.unpolish(self._btn_install)
+            style.polish(self._btn_install)
+        self._btn_install.update()
+
     def refresh(self, *, check_remote: bool = False) -> None:
         if self._busy:
             return
         self._channel = runtime.get_channel()
-        self._set_status(f"Checking Matte runtime (channel “{self._channel}”)…")
+        self._set_status(f"Checking runtime (“{self._channel}”)…")
         try:
             status = runtime.probe_status(
                 channel=self._channel, check_remote=check_remote
             )
         except Exception as exc:
-            self._summary.setText(f"Runtime check failed: {exc}")
+            self._summary.setText(f"Check failed: {exc}")
+            self._summary.setStyleSheet("")
             self._ready = False
+            self._update_install_style()
             self.readiness_changed.emit(False)
             self._set_status("Runtime check failed.")
             return
         self._apply_status(status)
+        home = status.home
+        ml = runtime.embr_ml_root(status.home)
+        self._summary.setToolTip(f"{home}\nml {ml}")
 
     def _apply_status(self, status: runtime.RuntimeStatus) -> None:
         self._last_status = status
         self._channel = status.channel
         self._ready = matte_ready(status)
-        self._summary.setText(matte_summary(status))
-        self._home.setText(f"{status.home}  ·  ml {runtime.embr_ml_root(status.home)}")
+        self._summary.setText(matte_compact(status))
         if self._ready:
             self._summary.setStyleSheet(f"color: {embr_ui.EMBR_EMBER};")
         else:
             self._summary.setStyleSheet("")
+        self._update_install_style()
         self.readiness_changed.emit(self._ready)
-        self._set_status(matte_summary(status))
 
     def _set_busy(self, busy: bool) -> None:
         self._busy = busy
         self._btn_check.setEnabled(not busy)
         self._btn_install.setEnabled(not busy)
 
+    def _show_log(self, visible: bool) -> None:
+        self._log.setVisible(visible)
+
     def _append_log(self, line: str) -> None:
         if not self._log.isVisible():
-            self._log.setVisible(True)
+            self._show_log(True)
         self._log.appendPlainText(line)
 
     def _start_install(self) -> None:
@@ -213,11 +231,9 @@ class RuntimePanel(QWidget):
 
         self._channel = runtime.get_channel()
         self._log.clear()
-        self._log.setVisible(True)
+        self._show_log(True)
         self._set_busy(True)
-        self._set_status(
-            f"Installing Matte runtime (channel “{self._channel}”)…"
-        )
+        self._set_status(f"Installing runtime (“{self._channel}”)…")
 
         thread = QThread(self)
         worker = _InstallWorker(self._channel)
@@ -243,22 +259,30 @@ class RuntimePanel(QWidget):
     def _on_install_ok(self, status: object) -> None:
         if isinstance(status, runtime.RuntimeStatus):
             self._apply_status(status)
-            self._append_log(
-                f"Done — {status.ok_count}/{len(status.items)} checks OK."
-            )
         else:
             self.refresh(check_remote=False)
+        self._show_log(False)
+        self._log.clear()
         if self._ready:
-            self._set_status("Matte runtime ready.")
+            self._set_status("Runtime ready.")
         else:
+            self._show_log(True)
             self._set_status(
-                "Install finished but Matte checks are still incomplete. "
-                "See the log / Check again."
+                "Install finished but checks incomplete — see log."
             )
 
     def _on_install_failed(self, message: str) -> None:
         self._append_log(f"ERROR: {message}")
-        self.refresh(check_remote=False)
+        self._show_log(True)
+        try:
+            status = runtime.probe_status(
+                channel=self._channel, check_remote=False
+            )
+            self._apply_status(status)
+        except Exception:
+            self._ready = False
+            self._update_install_style()
+            self.readiness_changed.emit(False)
         box = QMessageBox(None)
         box.setIcon(QMessageBox.Icon.Critical)
         box.setWindowTitle("Embr Matte")

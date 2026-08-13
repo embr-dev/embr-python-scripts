@@ -22,9 +22,7 @@ Main Menu → **Embr → Matte**。Media Panel のクリップをジョブ化し
 
 ## Phase 1 — Runtime gate
 
-窓上部に **Check / Install**。`embr_runtime.probe_status` で home / uv / venv / media / matte / weights を確認し、不足時は Manager PyBox と同じ `install_or_update_runtime` をバックグラウンド実行（ログ表示）。チャンネルは Manager で選んだものを共用。
-
-Add / Import はランタイム無しでも可（Phase 0）。今後の ML（SAM2 / MatAnyone2）は ready が前提。
+窓上部は **1行**（`Ready · mps · dev` + Check / Install）。パスはツールチップ。Install ログは実行中のみ表示し、成功後は閉じる。Install のオレンジ強調は未準備時のみ（通常の accent は Add）。
 
 ## Export プリセット
 
