@@ -37,6 +37,9 @@ MEDIA_DEPS: tuple[str, ...] = (
     "OpenEXR>=3.2",
 )
 MEDIA_IMPORT_PROBE = "import numpy, PIL, OpenEXR"
+MATTE_IMPORT_PROBE = "import torch, matanyone2"
+MATANYONE2_REPO_URL = "https://github.com/pq-yang/MatAnyone2.git"
+MATANYONE2_DIR_NAME = "MatAnyone2"
 
 
 class EmbrRuntimeError(RuntimeError):
@@ -84,6 +87,11 @@ def worker_venv_python(home: Path | None = None) -> Path:
 
 def matanyone_weight_path(home: Path | None = None) -> Path:
     return embr_ml_root(home) / "models" / "matanyone2" / "matanyone2.pth"
+
+
+def matanyone2_src_path(home: Path | None = None) -> Path:
+    """Return ``$EMBR_ML_ROOT/src/MatAnyone2`` (local editable install)."""
+    return embr_ml_root(home) / "src" / MATANYONE2_DIR_NAME
 
 
 def legacy_uv_path() -> Path:
@@ -319,6 +327,11 @@ def probe_status(
             "media",
             "media deps",
             *media_deps_ok(root),
+        ),
+        CheckItem(
+            "matte",
+            "matte deps",
+            *matte_deps_ok(root),
         ),
         CheckItem(
             "weights",
@@ -683,6 +696,171 @@ def ensure_media_deps(
     _log(log, f"media deps ready: {detail}")
 
 
+def matte_deps_ok(home: Path | None = None) -> tuple[bool, str]:
+    """Return ``(ok, detail)`` for torch + matanyone2 in the worker venv."""
+    py = worker_venv_python(home)
+    if not (py.is_file() and os.access(py, os.X_OK)):
+        return False, "worker venv missing"
+    code, out, err = _git_capture(
+        [
+            str(py),
+            "-c",
+            "import torch, matanyone2; "
+            "print('cuda' if torch.cuda.is_available() else "
+            "('mps' if getattr(torch.backends, 'mps', None) "
+            "and torch.backends.mps.is_available() else 'cpu'))",
+        ],
+        timeout=60,
+    )
+    if code == 0:
+        device = (out or "ok").strip() or "ok"
+        return True, f"torch + matanyone2 ({device})"
+    detail = (err or "import failed").splitlines()[-1] if err else "import failed"
+    return False, detail
+
+
+def _worker_uv_env(home: Path) -> dict[str, str]:
+    uv = embr_uv_path(home)
+    worker = handlers_repo_path(home) / "worker"
+    return {
+        "EMBR_HOME": str(home),
+        "EMBR_ML_ROOT": str(embr_ml_root(home)),
+        "EMBR_UV": str(uv),
+        "PATH": f"{home / 'bin'}{os.pathsep}{os.environ.get('PATH', '')}",
+        "UV_INSTALL_DIR": str(home / "bin"),
+        "VIRTUAL_ENV": str(worker / ".venv"),
+        "HF_HOME": str(embr_ml_root(home) / "models" / "hf"),
+    }
+
+
+def _patch_matanyone2_pyproject(src: Path, *, log: LogFn | None = None) -> None:
+    """Remove hatch force-include that breaks ``pip install -e`` on some hosts."""
+    path = src / "pyproject.toml"
+    if not path.is_file():
+        return
+    text = path.read_text(encoding="utf-8")
+    if "force-include" not in text:
+        return
+    import re
+
+    patched = re.sub(
+        r"\n\[tool\.hatch\.build\.targets\.wheel\.force-include\][^\n]*\n"
+        r"(?:[^\n\[\]]+\n)*",
+        "\n",
+        text,
+        count=1,
+    )
+    if patched == text:
+        return
+    path.write_text(patched, encoding="utf-8")
+    _log(log, f"Patched {path} (removed hatch force-include)")
+
+
+def ensure_matanyone2_src(
+    home: Path | None = None,
+    *,
+    log: LogFn | None = None,
+) -> Path:
+    """Clone MatAnyone2 under ``$EMBR_ML_ROOT/src`` and apply packaging patch."""
+    root = (home or embr_home()).expanduser().resolve()
+    src = matanyone2_src_path(root)
+    if src.is_dir() and (src / "pyproject.toml").is_file():
+        _log(log, f"MatAnyone2 src present: {src}")
+        _patch_matanyone2_pyproject(src, log=log)
+        return src
+
+    if src.exists():
+        raise EmbrRuntimeError(f"Refusing to overwrite non-src path: {src}")
+    if shutil.which("git") is None:
+        raise EmbrRuntimeError("git is required to clone MatAnyone2")
+
+    src.parent.mkdir(parents=True, exist_ok=True)
+    _log(log, f"Cloning {MATANYONE2_REPO_URL} → {src}")
+    _run(
+        [
+            "git",
+            "clone",
+            "--depth",
+            "1",
+            MATANYONE2_REPO_URL,
+            str(src),
+        ],
+        log=log,
+    )
+    _patch_matanyone2_pyproject(src, log=log)
+    return src
+
+
+def ensure_matte_deps(
+    home: Path | None = None,
+    *,
+    log: LogFn | None = None,
+) -> None:
+    """Install torch + MatAnyone2 (editable) into the worker venv.
+
+    Uses ``uv pip … --torch-backend=auto`` when supported (override with
+    ``$EMBR_TORCH_BACKEND``, e.g. ``cu124`` / ``cpu``). MatAnyone2 is installed
+    from ``$EMBR_ML_ROOT/src/MatAnyone2`` after a hatch packaging patch.
+    """
+    root = (home or embr_home()).expanduser().resolve()
+    uv = embr_uv_path(root)
+    worker = handlers_repo_path(root) / "worker"
+    py = worker_venv_python(root)
+    if not (uv.is_file() and os.access(uv, os.X_OK)):
+        raise EmbrRuntimeError(f"uv missing: {uv}")
+    if not (py.is_file() and os.access(py, os.X_OK)):
+        raise EmbrRuntimeError(f"worker venv python missing: {py}")
+
+    ok, detail = matte_deps_ok(root)
+    if ok:
+        _log(log, f"matte deps already present: {detail}")
+        return
+
+    env = _worker_uv_env(root)
+    backend = os.environ.get("EMBR_TORCH_BACKEND", "auto").strip() or "auto"
+    torch_cmd = [
+        str(uv),
+        "pip",
+        "install",
+        "--python",
+        str(py),
+        "torch",
+        "torchvision",
+    ]
+    probe = subprocess.run(
+        [str(uv), "pip", "install", "--help"],
+        text=True,
+        capture_output=True,
+    )
+    help_text = (probe.stdout or "") + (probe.stderr or "")
+    if "--torch-backend" in help_text:
+        torch_cmd.extend(["--torch-backend", backend])
+        _log(log, f"Installing torch / torchvision (torch-backend={backend})…")
+    else:
+        _log(
+            log,
+            "Installing torch / torchvision (uv has no --torch-backend; "
+            "using default index)…",
+        )
+    _run(torch_cmd, log=log, env=env, cwd=worker)
+
+    src = ensure_matanyone2_src(root, log=log)
+    _log(log, f"Installing MatAnyone2 editable from {src} …")
+    _run(
+        [str(uv), "pip", "install", "--python", str(py), "-e", str(src)],
+        log=log,
+        env=env,
+        cwd=worker,
+    )
+
+    ok, detail = matte_deps_ok(root)
+    if not ok:
+        raise EmbrRuntimeError(
+            "matte deps install finished but import still fails: " + detail
+        )
+    _log(log, f"matte deps ready: {detail}")
+
+
 def run_bootstrap(
     home: Path | None = None,
     *,
@@ -716,9 +894,10 @@ def install_or_update_runtime(
     *,
     channel: str | None = None,
     update_repo: bool = True,
+    with_matte: bool = True,
     log: LogFn | None = None,
 ) -> RuntimeStatus:
-    """Full Install / Update: layout → uv → clone/pull → bootstrap → media deps."""
+    """Full Install / Update: bootstrap → media → matte (torch + MatAnyone2)."""
     root = ensure_layout(home)
     chosen = set_channel(root, channel if channel is not None else get_channel(root))
     _log(log, f"EMBR_HOME={root}")
@@ -727,6 +906,8 @@ def install_or_update_runtime(
     ensure_handlers_repo(root, channel=chosen, update=update_repo, log=log)
     run_bootstrap(root, log=log)
     ensure_media_deps(root, log=log)
+    if with_matte:
+        ensure_matte_deps(root, log=log)
     status = probe_status(root, channel=chosen, check_remote=True)
     if status.update_available:
         _log(log, "Warning: still behind remote after update.")
@@ -738,9 +919,10 @@ def repair_runtime(
     home: Path | None = None,
     *,
     channel: str | None = None,
+    with_matte: bool = True,
     log: LogFn | None = None,
 ) -> RuntimeStatus:
-    """Repair: ensure uv + repo, recreate bootstrap, reinstall media deps."""
+    """Repair: recreate bootstrap, reinstall media + matte deps."""
     root = ensure_layout(home)
     chosen = set_channel(root, channel if channel is not None else get_channel(root))
     install_uv(root, log=log)
@@ -751,6 +933,8 @@ def repair_runtime(
         shutil.rmtree(venv, ignore_errors=True)
     run_bootstrap(root, log=log)
     ensure_media_deps(root, log=log)
+    if with_matte:
+        ensure_matte_deps(root, log=log)
     return probe_status(root, channel=chosen, check_remote=True)
 
 

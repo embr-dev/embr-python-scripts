@@ -136,6 +136,8 @@ def main() -> None:
         assert st.home == home.resolve()
         assert not st.all_ok
         assert any(i.id == "uv" and not i.ok for i in st.items)
+        assert any(i.id == "matte" and not i.ok for i in st.items)
+        assert any(i.id == "media" and not i.ok for i in st.items)
     print("ALL PASSED")
 
 

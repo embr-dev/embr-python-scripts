@@ -118,8 +118,8 @@ class PyBoxTab(QWidget):
         body.addLayout(self._checks)
 
         license_note = QLabel(
-            "MatAnyone2 weights follow S-Lab non-commercial terms — "
-            "confirm studio policy before Install."
+            "Install also pulls torch + MatAnyone2 (S-Lab non-commercial). "
+            "Confirm studio policy; first Install may take a long time."
         )
         license_note.setObjectName("embrMuted")
         license_note.setWordWrap(True)

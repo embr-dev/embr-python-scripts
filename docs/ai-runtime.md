@@ -55,9 +55,12 @@ Flame hooks（`…/python/Embr/`）とは別に、**AI / PyBox 用ランタイ�
 2. Astral uv を **`$EMBR_HOME/bin`** に配置（`UV_INSTALL_DIR`）  
 3. `embr-pybox-handlers` を `repos/` に clone（または update）  
 4. `worker/embr_ml/bootstrap.py` を実行（venv・モデル確保）  
-5. **media deps** を worker venv へ入れる（`numpy` / `Pillow` / `OpenEXR`）
+5. **media deps** を worker venv へ入れる（`numpy` / `Pillow` / `OpenEXR`）  
+6. **matte deps**（時間がかかる）  
+   - `torch` / `torchvision`（`uv pip --torch-backend=auto`、上書きは `$EMBR_TORCH_BACKEND`）  
+   - `$EMBR_ML_ROOT/src/MatAnyone2` を clone（無ければ）→ hatch `force-include` を除去 → `uv pip install -e`
 
-handlers の `dev` 上 pyproject が空依存でも、Install 側で明示インストールする（Run Matte / HUD 用）。
+handlers の `dev` が空依存でも media は Install 側で明示インストールする。matte は検証用に Install 既定で入れる（`--skip-matte` で省略可）。
 
 bootstrap の起動は **Python 3.10+ 必須**。Linux では Flame 起動でも `sys.executable` が古い `/usr/bin/python3`（3.6）になることがあるため、Install は次の順で選ぶ:
 
@@ -86,6 +89,9 @@ python3 tools/install_embr_runtime.py --repair
 
 # Media deps only (numpy / Pillow / OpenEXR into existing venv)
 python3 tools/install_embr_runtime.py --media-only
+
+# Matte deps only (torch + MatAnyone2; long download)
+python3 tools/install_embr_runtime.py --matte-only
 
 # Uninstall
 python3 tools/install_embr_runtime.py --uninstall --yes

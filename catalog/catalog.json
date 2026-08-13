@@ -6,15 +6,15 @@
     {
       "id": "embr",
       "name": "Embr Core",
-      "version": "0.2.28",
+      "version": "0.2.29",
       "kind": "library",
       "path": "scripts/embr",
       "min_flame": "2025.0",
-      "digest": "1d2762c9f8b067e06140682704896cb7da4d97bba4fba0fda154a285bda7db0d",
+      "digest": "dcc7eb1e2b25b49c9fc4ee099fefc6e2a1c634eecb8f37159bee08a1c3b5e577",
       "files": [
         {
           "path": "__init__.py",
-          "sha256": "f384d1d8468bd4b9f4c4aabc0c4419f892431e9381d8935ae13b7ea31e8aef3c"
+          "sha256": "d54d8a71dd710c1b9459cb58ef6e945da56dc7413b2b283ab3b0a74877c87cb3"
         },
         {
           "path": "assets/fonts/Figtree/Figtree-Bold.ttf",
@@ -74,7 +74,7 @@
         },
         {
           "path": "embr_runtime.py",
-          "sha256": "ed8a8032f5da5a6e68cd4faeb9c88703dab76f1376b42b964a93f5fb072e43bc"
+          "sha256": "b6f7dac3fd3d02d4f279dc03dd1a5e5be907d35a19442a23255c4db71a975e90"
         },
         {
           "path": "embr_ui.py",
@@ -93,15 +93,15 @@
     {
       "id": "embr_manager",
       "name": "Embr Manager",
-      "version": "0.2.2",
+      "version": "0.2.3",
       "kind": "tool",
       "path": "scripts/embr_manager",
       "min_flame": "2025.0",
-      "digest": "7353e705831f2a33379e1f330a4999d2c6835963639c827a9b646e5381aa0c65",
+      "digest": "4e80d6052a68016fc67036fffec5e58e6189cead97129325f79550150a4b6aa2",
       "files": [
         {
           "path": "embr_manager.py",
-          "sha256": "6b1e765ef067aa300b022634eb315cc5d8d6980a940a2784c1a6c34d6fa154de"
+          "sha256": "da6619dcce90186a7962e80a944cef5b8911f4a1595ee49a64ed6a9f0a2bf743"
         },
         {
           "path": "embr_sm_actions.py",
@@ -121,7 +121,7 @@
         },
         {
           "path": "embr_sm_pybox.py",
-          "sha256": "554abbd1e71a7e569b4d62a52b7c49b3dba36a802b66a5e9a3dc28af545037a1"
+          "sha256": "2336058d6a256df7c7652da42849f54db9785b7e95ddf001f689d6af56450b90"
         },
         {
           "path": "embr_sm_window.py",

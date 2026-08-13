@@ -72,6 +72,16 @@ def main() -> int:
         help="Only install numpy / Pillow / OpenEXR into an existing worker venv",
     )
     parser.add_argument(
+        "--matte-only",
+        action="store_true",
+        help="Only install torch + MatAnyone2 into an existing worker venv",
+    )
+    parser.add_argument(
+        "--skip-matte",
+        action="store_true",
+        help="Skip torch / MatAnyone2 (media + bootstrap only)",
+    )
+    parser.add_argument(
         "--uninstall",
         action="store_true",
         help="Remove EMBR_HOME (and optional ~/embr-ml symlink)",
@@ -116,6 +126,14 @@ def main() -> int:
             )
             return 0
 
+        if args.matte_only:
+            runtime.ensure_media_deps(home, log=log)
+            runtime.ensure_matte_deps(home, log=log)
+            _print_status(
+                runtime.probe_status(home, channel=channel, check_remote=False)
+            )
+            return 0
+
         if args.uninstall:
             target = home or runtime.embr_home()
             if not args.yes:
@@ -128,12 +146,18 @@ def main() -> int:
             return 0
 
         if args.repair:
-            status = runtime.repair_runtime(home, channel=channel, log=log)
+            status = runtime.repair_runtime(
+                home,
+                channel=channel,
+                with_matte=not args.skip_matte,
+                log=log,
+            )
         else:
             status = runtime.install_or_update_runtime(
                 home,
                 channel=channel,
                 update_repo=not args.no_update_repo,
+                with_matte=not args.skip_matte,
                 log=log,
             )
         _print_status(status)
