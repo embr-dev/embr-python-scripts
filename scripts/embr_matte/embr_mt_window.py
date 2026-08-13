@@ -67,11 +67,7 @@ class _JobRow(QWidget):
         self._name.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse
         )
-        self._meta = QLabel(
-            f"id {job.id} · {job.parent_type} “{job.parent_name}” · {job.status}"
-            if job.parent_name
-            else f"id {job.id} · {job.status}"
-        )
+        self._meta = QLabel(self._meta_text(job))
         self._meta.setObjectName("embrMuted")
         self._meta.setWordWrap(True)
         text_col.addWidget(self._name)
@@ -94,6 +90,20 @@ class _JobRow(QWidget):
             self._btn_import.setText("In")
         self._btn_import.clicked.connect(lambda: on_import(self.job))
         row.addWidget(self._btn_import, 0, Qt.AlignmentFlag.AlignVCenter)
+
+    @staticmethod
+    def _meta_text(job: jobs.MatteJob) -> str:
+        bits = [f"id {job.id}"]
+        if job.parent_name:
+            bits.append(f"{job.parent_type} “{job.parent_name}”")
+        if job.source_width > 0 and job.source_height > 0:
+            bits.append(f"{job.source_width}x{job.source_height}")
+        if job.source_frame_rate:
+            bits.append(job.source_frame_rate)
+        if job.source_bit_depth:
+            bits.append(f"{job.source_bit_depth}-bit")
+        bits.append(job.status)
+        return " · ".join(bits)
 
     def _load_thumb(self) -> None:
         path = Path(self.job.thumbnail) if self.job.thumbnail else None
@@ -262,7 +272,12 @@ class MatteWindow(QWidget):
         job_id = jobs.new_job_id()
         job_dir = jobs.create_job_dirs(job_id)
         export_dir = job_dir / "export"
-        source_w, source_h = mt_sel.clip_resolution(clip)
+        fmt = mt_sel.clip_format(clip)
+        if fmt.width <= 0 or fmt.height <= 0:
+            raise RuntimeError(
+                f"Could not read resolution from “{name}”. "
+                "Open the clip once in Flame and try Add again."
+            )
 
         self._set_status(f"Exporting “{name}”…")
         mt_export.export_clip_to_job(clip, export_dir)
@@ -283,8 +298,12 @@ class MatteWindow(QWidget):
             export_dir=str(export_dir),
             # Phase 0: exported PNG sequence is the RGB input (no copy).
             input_dir=str(export_dir),
-            source_width=source_w,
-            source_height=source_h,
+            source_width=fmt.width,
+            source_height=fmt.height,
+            source_ratio=fmt.ratio,
+            source_bit_depth=fmt.bit_depth,
+            source_scan_mode=fmt.scan_mode,
+            source_frame_rate=fmt.frame_rate,
             created_at=datetime.now().isoformat(timespec="seconds"),
             parent_ref=parent,
         )

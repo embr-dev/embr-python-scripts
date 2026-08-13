@@ -14,7 +14,7 @@ Main Menu → **Embr → Matte**。Media Panel のクリップをジョブ化し
 1. ウィンドウを開く（空リスト + **Add**）
 2. Media Panel でクリップを選び **Add** → `jobs/<id>/export/` に PNG 書き出し（この連番をそのまま RGB input として使う）
 3. 一覧: サムネ・クリップ名・job id・**Import**
-4. **Import** → Add 時点の親リールへ `import_clips` → 名前を `<clip>-ML-Matte` に変更 → 記録したソース解像度へ `reformat(Fit)`（取得できた場合）→ `cache_media("current")`
+4. **Import** → Add 時点の親リールへ `import_clips` → 名前を `<clip>-ML-Matte` に変更 → 記録したソース解像度 / FPS / ビット深度へ `reformat(Fill)` → `cache_media("current")`
 
 ジョブはウィンドウを閉じても `status.json` で残る。親オブジェクト参照はセッション内のみ；再起動後は親名で解決し、見つからなければ失敗する（別リールへ流さない）。
 
@@ -28,7 +28,7 @@ Main Menu → **Embr → Matte**。Media Panel のクリップをジョブ化し
 
 - `flame.import_clips(path, destination)` 自体に名前／解像度引数は無い
 - 名前: 戻り値の `PyClip.name = "…-ML-Matte"`
-- 解像度: Add 時に保存した `source_width` / `source_height` で `reformat`（MediaHub options でも指定可能だが、本ツールは import 後 reformat を採用）
+- フォーマット: Add 時に `width` / `height` / `ratio` / `bit_depth` / `scan_mode` / `frame_rate` を `status.json` へ保存し、Import 後に `reformat`（`resize_mode=Fill`）。旧ジョブで解像度が 0 の場合は再 Add が必要
 
 ## 後続（未実装）
 

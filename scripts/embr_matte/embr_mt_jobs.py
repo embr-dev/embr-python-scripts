@@ -25,6 +25,10 @@ class MatteJob:
     input_dir: str = ""
     source_width: int = 0
     source_height: int = 0
+    source_ratio: float = 0.0
+    source_bit_depth: int = 0
+    source_scan_mode: str = ""
+    source_frame_rate: str = ""
     created_at: str = ""
     message: str = ""
     # Live Flame object — never serialize (asdict/deepcopy pickles and fails).
@@ -43,6 +47,10 @@ class MatteJob:
             "input_dir": self.input_dir,
             "source_width": self.source_width,
             "source_height": self.source_height,
+            "source_ratio": self.source_ratio,
+            "source_bit_depth": self.source_bit_depth,
+            "source_scan_mode": self.source_scan_mode,
+            "source_frame_rate": self.source_frame_rate,
             "created_at": self.created_at,
             "message": self.message,
         }
@@ -61,6 +69,10 @@ class MatteJob:
             input_dir=str(data.get("input_dir") or ""),
             source_width=int(data.get("source_width") or 0),
             source_height=int(data.get("source_height") or 0),
+            source_ratio=float(data.get("source_ratio") or 0.0),
+            source_bit_depth=int(data.get("source_bit_depth") or 0),
+            source_scan_mode=str(data.get("source_scan_mode") or ""),
+            source_frame_rate=str(data.get("source_frame_rate") or ""),
             created_at=str(data.get("created_at") or ""),
             message=str(data.get("message") or ""),
         )
