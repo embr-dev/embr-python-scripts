@@ -80,7 +80,7 @@ def main() -> None:
             "main_menu",
             "script_manager",
             execute=_noop,
-            caption="Script Manager",
+            caption="Manager",
             config_root=config_root,
         )
         assert shown_pref is not None and shown_sm is not None
@@ -91,7 +91,7 @@ def main() -> None:
         assert len(group) == 1
         assert [a["name"] for a in group[0]["actions"]] == [
             "Preferences",
-            "Script Manager",
+            "Manager",
         ]
 
         menus.reset_menu_prefs(config_root=config_root)

@@ -192,7 +192,7 @@ def uninstall_package(
     if package_id in PROTECTED_FROM_UNINSTALL:
         raise ActionError(
             f"Embr Script Manager: cannot uninstall '{package_id}' - "
-            "core packages (Embr Core / Script Manager / Preferences) are protected. "
+            "core packages (Embr Core / Embr Manager / Preferences) are protected. "
             "Remove them manually from the install root if you really need to."
         )
     state = local_mod.load_state(root)

@@ -1,10 +1,10 @@
-# Script Manager
+# Embr Manager (Scripts)
 
 GitHub 上のカタログを正とし、ローカルの Embr インストールと照合して **Install / Update / Uninstall / Repair** するツール。
 
 | 項目 | 内容 |
 |------|------|
-| メニュー | Main Menu → **Embr → Script Manager**（並びは `embr.menus` / Preferences） |
+| メニュー | Main Menu → **Embr → Manager**（ウィンドウ: Embr Manager / Scripts タブ） |
 | パッケージ | `scripts/embr_manager/` |
 | カタログ | [`catalog/catalog.json`](../catalog/catalog.json) |
 | 生成 | `python3 tools/gen_catalog.py`（`ref` は現在の git branch） |
@@ -72,7 +72,7 @@ cd embr-python-scripts
 
 `find_flame_python.sh` は `/opt/Autodesk/python/2025.2.7` のような **マイナー付き** パスから最新の `bin/python3` を選ぶ（`…/python/2025` は無いことが多い）。
 
-その後は **通常起動**（`DL_PYTHON_HOOK_PATH` なし）→ Rescan → Embr → Script Manager。
+その後は **通常起動**（`DL_PYTHON_HOOK_PATH` なし）→ Rescan → Embr → Manager。
 
 ---
 
@@ -81,7 +81,7 @@ cd embr-python-scripts
 1. `bootstrap_from_channel.py`、または初回ダイアログで User / Shared  
 2. カタログから `embr` + `embr_manager` + `embr_preferences` を `…/python/Embr/` へ配置  
 3. **Rescan Python Hooks**  
-4. Main Menu → Embr → Script Manager  
+4. Main Menu → Embr → Manager  
 
 ## 開発時（DL_PYTHON_HOOK_PATH）
 
@@ -143,7 +143,7 @@ PYTHONPATH=scripts "$(./tools/find_flame_python.sh)" tools/test_script_manager.p
 ### Flame 内（手動・配布相当）
 
 - [ ] `bootstrap_from_channel.py --channel dev` → `…/python/Embr/`
-- [ ] `DL_PYTHON_HOOK_PATH` **なし**で起動 → Script Manager
+- [ ] `DL_PYTHON_HOOK_PATH` **なし**で起動 → Manager
 - [ ] Channel 切替（dev / latest / stable）
 - [ ] Install / Update / Repair / Uninstall
 - [ ] Shared python（書ける場合 / 書けない場合のエラー文）

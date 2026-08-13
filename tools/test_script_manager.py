@@ -108,12 +108,13 @@ def main() -> None:
 
     import embr_sm_window
 
-    w = embr_sm_window.ScriptManagerWindow(
+    w = embr_sm_window.EmbrManagerWindow(
         root=SCRIPTS,
         catalog_path=ROOT / "catalog" / "catalog.json",
         source_root=SCRIPTS,
     )
-    assert w._table.rowCount() >= 2
+    assert w._tabs.tabText(0) == "Scripts"
+    assert w._scripts._table.rowCount() >= 2
     print("ALL PASSED")
 
 

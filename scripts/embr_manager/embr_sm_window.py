@@ -1,7 +1,8 @@
-"""Script Manager window (PySide6)."""
+"""Embr Manager window (PySide6) — tabbed hub; Scripts tab is the former Script Manager."""
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 
 from PySide6.QtCore import Qt
@@ -16,6 +17,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QSizePolicy,
+    QTabWidget,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -45,39 +47,43 @@ _COL_REMOTE = 3
 _COL_STATUS_W = 140
 _COL_VERSION_W = 88
 
+StatusFn = Callable[[str], None]
 
-class ScriptManagerWindow(QDialog):
+
+class ScriptsTab(QWidget):
+    """Scripts package list — install / update / repair / uninstall."""
+
     def __init__(
         self,
         parent: QWidget | None = None,
         *,
-        root: Path | None = None,
+        root: Path,
         catalog_path: Path | None = None,
         source_root: Path | None = None,
         channel: str | None = None,
+        set_status: StatusFn | None = None,
     ) -> None:
         super().__init__(parent)
-        self._root = (root or paths.install_root()).resolve()
+        self._root = root.resolve()
         self._catalog_path = catalog_path
         self._source_root = source_root
         self._catalog: Catalog | None = None
         self._rows_by_id: dict[str, dict[str, str]] = {}
         self._busy = False
+        self._set_status_fn = set_status
         if channel is not None:
             self._channel = normalize_channel(channel)
         else:
             self._channel = normalize_channel(local.get_channel(self._root))
 
-        title_bar = embr_ui.prepare_embr_window(self, "Script Manager")
-
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        layout.addWidget(title_bar)
-
-        body = QVBoxLayout()
-        body.setContentsMargins(12, 12, 12, 12)
-        body.setSpacing(8)
+        body = QVBoxLayout(self)
+        body.setContentsMargins(
+            embr_ui.EMBR_SPACE_3,
+            embr_ui.EMBR_SPACE_3,
+            embr_ui.EMBR_SPACE_3,
+            embr_ui.EMBR_SPACE_3,
+        )
+        body.setSpacing(embr_ui.EMBR_SPACE_2)
 
         meta = QHBoxLayout()
         self._root_label = QLabel()
@@ -118,7 +124,7 @@ class ScriptManagerWindow(QDialog):
         self._table.setColumnWidth(_COL_STATUS, _COL_STATUS_W)
         self._table.setColumnWidth(_COL_LOCAL, _COL_VERSION_W)
         self._table.setColumnWidth(_COL_REMOTE, _COL_VERSION_W)
-        body.addWidget(self._table)
+        body.addWidget(self._table, 1)
 
         buttons = QHBoxLayout()
         self._btn_refresh = QPushButton("Refresh")
@@ -140,33 +146,25 @@ class ScriptManagerWindow(QDialog):
         buttons.addWidget(self._btn_install_update)
         body.addLayout(buttons)
 
-        layout.addLayout(body)
-
-        self._status = QLabel()
-        self._status.setObjectName("embrStatus")
-        self._status.setWordWrap(False)
-        self._status.setMinimumWidth(0)
-        self._status.setSizePolicy(
-            QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred
-        )
-        self._status.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        layout.addWidget(self._status)
-
-        self.resize(780, 480)
-
         self._btn_refresh.clicked.connect(self.refresh)
         self._btn_install_update.clicked.connect(self._run_install_or_update)
         self._btn_repair.clicked.connect(lambda: self._run_action("repair"))
         self._btn_uninstall.clicked.connect(lambda: self._run_action("uninstall"))
         self._table.itemSelectionChanged.connect(self._on_selection_changed)
 
+        self._persist_channel()
+        self._update_root_label()
+
+    def activate(self) -> None:
+        """Called when the Scripts tab is shown."""
         font_err = embr_ui.font_load_error()
         if font_err:
             self._set_status(font_err)
-
-        self._persist_channel()
-        self._update_root_label()
         self.refresh()
+
+    def _host_window(self) -> QWidget | None:
+        win = self.window()
+        return win if win is not None and win is not self else None
 
     def _channel_phrase(self) -> str:
         if self._catalog_path is not None:
@@ -174,7 +172,6 @@ class ScriptManagerWindow(QDialog):
         return f"channel “{self._channel}”"
 
     def _idle_status(self) -> str:
-        """Friendly idle / selection status for the footer."""
         total = self._table.rowCount()
         selected = self._selected_rows()
         n = len(selected)
@@ -206,13 +203,12 @@ class ScriptManagerWindow(QDialog):
         return f"{n} selected ({names}) — {hint}"
 
     def _set_status(self, text: str) -> None:
-        """Set status text without letting long messages widen the window."""
-        self._status.setText(text)
-        self._status.setMinimumWidth(0)
+        if self._set_status_fn is not None:
+            self._set_status_fn(text)
 
     def _process_ui(self) -> None:
-        """Pump paints so busy status is visible — never during hidden construction."""
-        if not self.isVisible():
+        host = self._host_window()
+        if host is None or not host.isVisible():
             return
         from PySide6.QtCore import QEventLoop
 
@@ -221,7 +217,6 @@ class ScriptManagerWindow(QDialog):
             app.processEvents(QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)
 
     def _set_busy(self, busy: bool, message: str | None = None) -> None:
-        """Dim the table and lock controls while a long action runs."""
         self._busy = busy
         self._table.setEnabled(not busy)
         if self._catalog_path is None:
@@ -253,18 +248,18 @@ class ScriptManagerWindow(QDialog):
         self._set_status(self._idle_status())
 
     def _alert(self, text: str, *, critical: bool = True) -> None:
-        """Show a modal alert without resizing this frameless window."""
-        geo = self.geometry()
+        host = self._host_window()
+        geo = host.geometry() if host is not None else None
         box = QMessageBox(None)
         box.setIcon(
             QMessageBox.Icon.Critical if critical else QMessageBox.Icon.Information
         )
-        box.setWindowTitle("Embr Script Manager")
+        box.setWindowTitle("Embr Manager")
         box.setText(text)
         box.setStandardButtons(QMessageBox.StandardButton.Ok)
         box.exec()
-        if not self.isMaximized():
-            self.setGeometry(geo)
+        if host is not None and geo is not None and not host.isMaximized():
+            host.setGeometry(geo)
 
     def _persist_channel(self) -> None:
         local.set_channel(self._root, self._channel)
@@ -320,7 +315,7 @@ class ScriptManagerWindow(QDialog):
         self._btn_uninstall.setEnabled(can_uninstall)
         if selected and all(r["id"] in actions.PROTECTED_FROM_UNINSTALL for r in selected):
             self._btn_uninstall.setToolTip(
-                "Embr Core and Script Manager cannot be uninstalled from the UI."
+                "Embr Core and Embr Manager cannot be uninstalled from the UI."
             )
         else:
             self._btn_uninstall.setToolTip("")
@@ -339,7 +334,7 @@ class ScriptManagerWindow(QDialog):
             return
         except Exception as exc:
             self._set_busy(False)
-            msg = f"Embr Script Manager: refresh failed - {exc}"
+            msg = f"Embr Manager: Scripts refresh failed - {exc}"
             self._alert(msg)
             self._set_status("Refresh failed. Check the network and try again.")
             return
@@ -366,8 +361,10 @@ class ScriptManagerWindow(QDialog):
             f"on {self._channel_phrase()}."
         )
         self._update_action_buttons()
-        self.raise_()
-        self.activateWindow()
+        host = self._host_window()
+        if host is not None:
+            host.raise_()
+            host.activateWindow()
 
     def _selected_ids(self) -> list[str]:
         return [r["id"] for r in self._selected_rows()]
@@ -375,7 +372,6 @@ class ScriptManagerWindow(QDialog):
     def _partition_install_work(
         self, work: list[dict[str, str]]
     ) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
-        """Split into Core/Script Manager (ordered) and remaining packages."""
         by_id = {row["id"]: row for row in work}
         core: list[dict[str, str]] = []
         for pkg_id in bootstrap.CORE_PACKAGE_ORDER:
@@ -404,13 +400,10 @@ class ScriptManagerWindow(QDialog):
             )
 
     def _rescan_python_hooks(self) -> bool:
-        """Run Flame Rescan (lets Flame reload hook modules from disk)."""
         self._set_busy(True, "Rescanning Python Hooks…")
         try:
             import embr_hooks as hooks
 
-            # No sys.modules wipe — Flame Reloading + importlib.reload needs the
-            # same module objects to stay registered.
             hooks.refresh()
             return True
         except Exception:
@@ -438,7 +431,7 @@ class ScriptManagerWindow(QDialog):
         rescanned = False
         try:
             phases = (("core", core), ("other", others))
-            for phase_name, rows in phases:
+            for _phase_name, rows in phases:
                 if not rows:
                     continue
                 total = len(rows)
@@ -455,9 +448,6 @@ class ScriptManagerWindow(QDialog):
                     self._install_or_update_row(row)
                 if self._rescan_python_hooks():
                     rescanned = True
-                else:
-                    # Continue installing remaining packages; warn at the end.
-                    pass
         except (actions.ActionError, CatalogError) as exc:
             self._set_busy(False)
             self._alert(str(exc))
@@ -465,7 +455,7 @@ class ScriptManagerWindow(QDialog):
             return
         except Exception as exc:
             self._set_busy(False)
-            msg = f"Embr Script Manager: install/update failed - {exc}"
+            msg = f"Embr Manager: install/update failed - {exc}"
             self._alert(msg)
             self._set_status("Install / Update failed. Try Repair or Refresh.")
             return
@@ -485,20 +475,21 @@ class ScriptManagerWindow(QDialog):
             blocked = [i for i in ids if i in actions.PROTECTED_FROM_UNINSTALL]
             if not removable:
                 self._alert(
-                    "Embr Core and Script Manager cannot be uninstalled from the UI."
+                    "Embr Core and Embr Manager cannot be uninstalled from the UI."
                 )
                 return
-            geo = self.geometry()
+            host = self._host_window()
+            geo = host.geometry() if host is not None else None
             msg = f"Uninstall {', '.join(removable)} from:\n{self._root} ?"
             if blocked:
                 msg += f"\n\nSkipped (protected): {', '.join(blocked)}"
             answer = QMessageBox.question(
                 None,
-                "Embr Script Manager",
+                "Embr Manager",
                 msg,
             )
-            if not self.isMaximized():
-                self.setGeometry(geo)
+            if host is not None and geo is not None and not host.isMaximized():
+                host.setGeometry(geo)
             if answer != QMessageBox.StandardButton.Yes:
                 return
             ids = removable
@@ -528,7 +519,7 @@ class ScriptManagerWindow(QDialog):
             return
         except Exception as exc:
             self._set_busy(False)
-            msg = f"Embr Script Manager: {action} failed - {exc}"
+            msg = f"Embr Manager: {action} failed - {exc}"
             self._alert(msg)
             self._set_status(f"{label} failed. Try Refresh and try again.")
             return
@@ -539,10 +530,12 @@ class ScriptManagerWindow(QDialog):
         self._set_busy(False)
         self.refresh()
         done = f"{action} finished."
+        host = self._host_window()
         if already_rescanned:
             self._set_status(f"{done} {self._idle_status()}")
-            self.raise_()
-            self.activateWindow()
+            if host is not None:
+                host.raise_()
+                host.activateWindow()
             return
         try:
             import embr_hooks as hooks
@@ -553,19 +546,82 @@ class ScriptManagerWindow(QDialog):
             self._set_status(
                 f"{done} If menus look stale, run Rescan Python Hooks."
             )
-        self.raise_()
-        self.activateWindow()
+        if host is not None:
+            host.raise_()
+            host.activateWindow()
 
 
-def open_script_manager() -> None:
+class EmbrManagerWindow(QDialog):
+    """Tabbed hub. Scripts is first; PyBox / Matchbox tabs come later."""
+
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        *,
+        root: Path | None = None,
+        catalog_path: Path | None = None,
+        source_root: Path | None = None,
+        channel: str | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self._root = (root or paths.install_root()).resolve()
+
+        title_bar = embr_ui.prepare_embr_window(self, "Embr Manager")
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        layout.addWidget(title_bar)
+
+        self._tabs = QTabWidget()
+        self._tabs.setObjectName("embrTabs")
+        self._tabs.setDocumentMode(True)
+        self._scripts = ScriptsTab(
+            self,
+            root=self._root,
+            catalog_path=catalog_path,
+            source_root=source_root,
+            channel=channel,
+            set_status=self._set_status,
+        )
+        self._tabs.addTab(self._scripts, "Scripts")
+        layout.addWidget(self._tabs, 1)
+
+        self._status = QLabel()
+        self._status.setObjectName("embrStatus")
+        self._status.setWordWrap(False)
+        self._status.setMinimumWidth(0)
+        self._status.setSizePolicy(
+            QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred
+        )
+        self._status.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        layout.addWidget(self._status)
+
+        self.resize(780, 520)
+        self._tabs.currentChanged.connect(self._on_tab_changed)
+        self._scripts.activate()
+
+    def _set_status(self, text: str) -> None:
+        self._status.setText(text)
+        self._status.setMinimumWidth(0)
+
+    def _on_tab_changed(self, index: int) -> None:
+        widget = self._tabs.widget(index)
+        if widget is self._scripts:
+            self._scripts.activate()
+
+
+# Back-compat alias for older imports / tests.
+ScriptManagerWindow = EmbrManagerWindow
+
+
+def open_embr_manager() -> None:
     """Entry used by the Flame hook (one window per QApplication)."""
     root = paths.install_root()
-    # Dev convenience: use local catalog when running from the repo tree.
     catalog_path = None
     source_root = None
     candidate = paths.scripts_root().parent / "catalog" / "catalog.json"
     if candidate.is_file() and (paths.scripts_root() / "embr").is_dir():
-        # Only treat as repo checkout when catalog sits next to scripts/.
         if paths.scripts_root().name == "scripts":
             catalog_path = candidate
             source_root = paths.scripts_root()
@@ -595,17 +651,22 @@ def open_script_manager() -> None:
                 "Embr Setup",
                 f"Embr installed to:\n{chosen}\n\n"
                 f"Channel: {channel}\n\n"
-                "Rescan Python Hooks (or restart Flame), then open Script Manager again.",
+                "Rescan Python Hooks (or restart Flame), then open Manager again.",
             )
         except Exception as exc:
             QMessageBox.critical(None, "Embr Setup", str(exc))
         return
 
-    def _factory() -> ScriptManagerWindow:
-        return ScriptManagerWindow(
+    def _factory() -> EmbrManagerWindow:
+        return EmbrManagerWindow(
             root=root,
             catalog_path=catalog_path,
             source_root=source_root,
         )
 
-    embr_ui.show_singleton_window("_embr_script_manager", _factory)
+    embr_ui.show_singleton_window("_embr_manager", _factory)
+
+
+def open_script_manager() -> None:
+    """Back-compat entry point."""
+    open_embr_manager()

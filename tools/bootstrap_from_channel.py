@@ -84,7 +84,7 @@ def main() -> int:
         channel=args.channel,
     )
     print("Bootstrap complete.")
-    print("Rescan Python Hooks (or restart Flame), then open Embr → Script Manager.")
+    print("Rescan Python Hooks (or restart Flame), then open Embr → Manager.")
     return 0
 
 

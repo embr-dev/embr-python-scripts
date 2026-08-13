@@ -661,6 +661,37 @@ def stylesheet(*, combo_arrow_url: str | None = None) -> str:
         border: none;
         padding: 0px;
     }}
+    QTabWidget#embrTabs {{
+        background-color: {EMBR_BG};
+        border: none;
+    }}
+    QTabWidget#embrTabs::pane {{
+        background-color: {EMBR_BG};
+        border: none;
+        border-top: 1px solid {EMBR_BORDER};
+        top: -1px;
+    }}
+    QTabWidget#embrTabs QTabBar {{
+        background: {EMBR_SURFACE};
+    }}
+    QTabWidget#embrTabs QTabBar::tab {{
+        background: {EMBR_SURFACE};
+        color: {EMBR_MUTED};
+        border: none;
+        border-right: 1px solid {EMBR_BORDER};
+        padding: {s2}px {s3}px;
+        min-width: 72px;
+    }}
+    QTabWidget#embrTabs QTabBar::tab:selected {{
+        background: {EMBR_BG};
+        color: {EMBR_TEXT};
+        font-weight: 600;
+        border-bottom: 2px solid {EMBR_EMBER};
+    }}
+    QTabWidget#embrTabs QTabBar::tab:hover:!selected {{
+        color: {EMBR_TEXT};
+        background: {EMBR_SURFACE_RAISED};
+    }}
     """
 
 
@@ -1137,7 +1168,7 @@ def show_singleton_window(attr: str, factory: Any) -> Any:
     """Show an existing QApplication-scoped window, or create one via ``factory``.
 
     ``attr`` is stored on the ``QApplication`` instance (e.g.
-    ``"_embr_script_manager"``) so the singleton survives Flame hook module
+    ``"_embr_manager"``) so the singleton survives Flame hook module
     reloads that clear ``sys.modules``. Closing / destroying the window clears
     the attribute.
     """

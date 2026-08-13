@@ -1,7 +1,8 @@
 ################################################################################
-# Embr Script Manager
+# Embr Manager
 #
-# Main Menu: Embr / Script Manager
+# Main Menu: Embr / Manager  (window title: Embr Manager)
+# Scripts tab = former Script Manager. PyBox / Matchbox tabs come later.
 #
 # Flame + DL_PYTHON_HOOK_PATH loads each .py by basename (not as a package).
 # Helpers use unique names (embr_sm_*.py). Import them as top-level modules
@@ -13,7 +14,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-__version__ = "0.1.14"
+__version__ = "0.2.0"
 
 _DIR = Path(__file__).resolve().parent
 _SCRIPTS = _DIR.parent
@@ -40,7 +41,11 @@ def _open_manager(_selection) -> None:
         from PySide6.QtWidgets import QApplication
 
         app = QApplication.instance()
-        existing = getattr(app, "_embr_script_manager", None) if app else None
+        existing = None
+        if app:
+            existing = getattr(app, "_embr_manager", None) or getattr(
+                app, "_embr_script_manager", None
+            )
         if existing is not None:
             try:
                 existing.show()
@@ -61,14 +66,14 @@ def _open_manager(_selection) -> None:
     try:
         import embr_sm_window
 
-        embr_sm_window.open_script_manager()
+        embr_sm_window.open_embr_manager()
     except Exception as exc:
-        log.error(f"Embr Script Manager: failed to open - {exc}", duration=10)
+        log.error(f"Embr Manager: failed to open - {exc}", duration=10)
         raise
 
 
 def get_main_menu_custom_ui_actions():
-    """Register Script Manager under Main Menu -> Embr.
+    """Register Manager under Main Menu -> Embr.
 
     Import ``embr_menus`` by basename (Flame-safe). On build failure only, use a
     static fallback. An empty group (user hid the item) must stay empty.
@@ -83,7 +88,7 @@ def get_main_menu_custom_ui_actions():
                 menus.action(
                     "main_menu",
                     "script_manager",
-                    caption="Script Manager",
+                    caption="Manager",
                     execute=_open_manager,
                 ),
             ],
@@ -93,7 +98,7 @@ def get_main_menu_custom_ui_actions():
             import embr_log as log
 
             log.error(
-                "Embr Script Manager: menu build failed; using fallback entry.",
+                "Embr Manager: menu build failed; using fallback entry.",
                 duration=8,
             )
         except Exception:
@@ -103,7 +108,7 @@ def get_main_menu_custom_ui_actions():
                 "name": "Embr",
                 "actions": [
                     {
-                        "name": "Script Manager",
+                        "name": "Manager",
                         "execute": _open_manager,
                         "minimumVersion": "2025.0.0.0",
                         "order": 100,
